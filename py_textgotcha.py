@@ -42,13 +42,6 @@ def get_gray(image_origin):
     return image_copy_grey
 
 
-def get_gray(file_path):
-    """ image file 을 읽어들여서 Gray-scale 을 적용한 이미지 객체를 반환합니다.
-    """
-    image_grey = cv2.imread(file_path, cv2.COLOR_BGR2GRAY)  # grey scale 로 복사합니다.
-    return image_grey
-
-
 def get_adaptive_gaussian_threshold(image_gray, block_size=15, subtract_val=2):
     """ Gray-scale 이 적용된 이미지를 입력받아서 Adaptive Threshold 를 적용한 흑백(Binary) 이미지객체를 반환합니다.
     @Params
@@ -104,6 +97,7 @@ def save_image(image, file_path):
 def main():
     file_path = PATH_SAMPLE_DIRECTORY + "ad_text2.jpg"
     image = open_original(file_path)
+    image = get_gray(image)
     show_window(image, "origin")
 
     return None
