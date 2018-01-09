@@ -11,7 +11,7 @@ And processes the image to extract the text portions using OpenCV-Python and CNN
 5) Long Line remove 적용한 image 반환 (추후)
 6) 위 단계를 모두 거친 image 로부터 Contour 추출해서 Contours 반환
     - contours 사이즈 일정 크기 이상만 추철해서 반환하기
-7) Contours 입력받아서 사각형(Rectangle)으로 원본이미지에 그리기
+7) Contours 입력받아서 사각형(Rectangle)으로 원본이미지에 그리기 (OK)
 
 ++++++++ 그 다음 생각하자 +++++++
 8) Rectangle 표시된 부분 자르기
@@ -90,6 +90,21 @@ def get_contours(image_threshold):
     return contours
 
 
+def draw_contour_rect(image, contours):
+    """ 이미지위에 찾은 Contours 를 기반으로 외각사각형을 그리고 해당 이미지를 반환합니다.
+    todo contour 의 색상이나 두깨도 인자로 받아서 설정할 수 있도록 변경하기
+    """
+    # 찾은 contours 를 입력받은 이미지위에 그리기
+    # image_with_contours = cv2.drawContours(image, contours, -1, (0, 255, 0), 2)
+
+    # Draw bounding rectangle
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)  # 좌상단 꼭지점 좌표 , width, height
+        cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)  # 원본 이미지 위에 사각형 그리기!
+
+    return image
+
+
 def show_window(image, title):
     """ 윈도우를 열어서 이미지를 보여줍니다.
     """
@@ -111,8 +126,11 @@ def main():
     image_gray = get_gray(image)
     image_threshold = get_adaptive_gaussian_threshold(image_gray)
     image_close = get_closing(image_threshold, 3, 3)
+    contours = get_contours(image_close)
+    image_with_contours = draw_contour_rect(image, contours)
     show_window(image_threshold, "origin")
-    show_window(image_close, "origin")
+    show_window(image_close, "image_close")
+    show_window(image_with_contours, "image_with_contours")
 
     return None
 
