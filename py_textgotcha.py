@@ -24,7 +24,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-PATH_SAMPLE_IMAGE = "C:/Users/viva/PycharmProjects/py-text-gotcha/images/"
+PATH_SAMPLE_DIRECTORY = "C:/Users/viva/PycharmProjects/py-text-gotcha/images/"
 
 
 def open_original(file_path):
@@ -81,17 +81,18 @@ def get_closing(image_gray, kernel_size_row, kernel_size_col):
     """
     # make kernel matrix for dilation and erosion (Use Numpy)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size_row, kernel_size_col))
-
     # closing 적용
     image_close = cv2.morphologyEx(image_gray, cv2.MORPH_CLOSE, kernel)
     return image_close
 
 
-def open_window(image, title):
+def show_window(image, title):
     """ 윈도우를 열어서 이미지를 보여줍니다.
     """
     cv2.namedWindow(title, cv2.WINDOW_NORMAL)  # 사용자가 크기 조절할 수 있는 윈도우 생성
     cv2.imshow(title, image)
+    cv2.waitKey(0)  # 키보드 입력될 때 까지 계속 기다림
+    cv2.destroyAllWindows()  # 이미지 윈도우 닫기
 
 
 def save_image(image, file_path):
@@ -101,7 +102,9 @@ def save_image(image, file_path):
 
 
 def main():
-    file_path = PATH_SAMPLE_IMAGE + "ad_text2.jpg"
+    file_path = PATH_SAMPLE_DIRECTORY + "ad_text2.jpg"
+    image = open_original(file_path)
+    show_window(image, "origin")
 
     return None
 
