@@ -7,7 +7,7 @@ And processes the image to extract the text portions using OpenCV-Python and CNN
     -
 2) Gradient 추출 (추후)
 3) Adaptive Threshold 적용한 image 반환, params 로 조정 값 받을 수 있도록 (OK)
-4) Close 적용한 image 반환
+4) Close 적용한 image 반환 (OK)
 5) Long Line remove 적용한 image 반환 (추후)
 6) 위 단계를 모두 거친 image 로부터 Contour 추출해서 Contours 반환
     - contours 사이즈 일정 크기 이상만 추철해서 반환하기
@@ -66,7 +66,7 @@ def get_adaptive_mean_threshold(image_gray, block_size=15, subtract_val=2):
     return image_adaptive_mean
 
 
-def get_closing(image_gray, kernel_size_row, kernel_size_col):
+def get_closing(image_gray, kernel_size_row=3, kernel_size_col=3):
     """ Gray scale 이 적용된 이미지에 Morph Close 를 적용합니다.
     Closing : dilation 수행을 한 후 바로 erosion 수행을 하여 본래 이미지 크기로
     커널은 Image Transformation 을 결정하는 구조화된 요소
@@ -77,6 +77,17 @@ def get_closing(image_gray, kernel_size_row, kernel_size_col):
     # closing 적용
     image_close = cv2.morphologyEx(image_gray, cv2.MORPH_CLOSE, kernel)
     return image_close
+
+
+def get_contours(image_threshold):
+    """ Threshold 가 적용된 이미지에 대하여 contour 를 추출하여 dictionary 형태로 반환합니다.
+    todo cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE 옵션도 인자로 받고 default 로 두기
+    """
+    # contours는 point의 list형태.
+    # hierarchy는 contours line의 계층 구조
+    # Threshold 적용한 이미지에서 contour 들을 찾아서 contours 변수에 저장하기
+    _, contours, _ = cv2.findContours(image_threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    return contours
 
 
 def show_window(image, title):
@@ -97,8 +108,11 @@ def save_image(image, file_path):
 def main():
     file_path = PATH_SAMPLE_DIRECTORY + "ad_text2.jpg"
     image = open_original(file_path)
-    image = get_gray(image)
-    show_window(image, "origin")
+    image_gray = get_gray(image)
+    image_threshold = get_adaptive_gaussian_threshold(image_gray)
+    image_close = get_closing(image_threshold, 3, 3)
+    show_window(image_threshold, "origin")
+    show_window(image_close, "origin")
 
     return None
 
