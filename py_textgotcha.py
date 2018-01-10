@@ -121,6 +121,15 @@ def get_contours(image_threshold):
     return contours
 
 
+def remove_vertical_line(image, threshold=100, min_line_length=80, max_line_gap=5):
+    lines = cv2.HoughLinesP(image, 1, np.pi / 180, threshold, min_line_length, max_line_gap)
+    for line in lines:
+        x1, y1, x2, y2 = line[0]  # get line end point ( (x1, y1) , (x2, y2) )
+        # remove line drawing black line
+        cv2.line(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    return image
+
+
 def draw_contour_rect(image, contours, min_width=3, min_height=3):
     """ 이미지위에 찾은 Contours 를 기반으로 외각사각형을 그리고 해당 이미지를 반환합니다.
     todo contour 의 색상이나 두깨도 인자로 받아서 설정할 수 있도록 변경하기
@@ -158,52 +167,78 @@ def main():
     """ 영향을 미치는 변수를 다양하게 적용해보면서 맞추어야 합니다.
     :return:
     """
-    block_size = 3  # Threshold (Odd number !!)
-    subtract_val = 1  # Threshold
+    block_size = 9 # Threshold (Odd number !!)
+    subtract_val = 12  # Threshold
     gradient_kernel_size_row = 2  # Gradient Kernel Size
     gradient_kernel_size_col = 2  # Gradient Kernel Size
-    close_kernel_size_row = 1  # Closing Kernel Size
-    close_kernel_size_col = 1  # Closing Kernel Size
+    close_kernel_size_row = 2  # Closing Kernel Size
+    close_kernel_size_col = 2  # Closing Kernel Size
     min_width = 4  # Minimum Contour Rectangle Size
     min_height = 10  # Minimum Contour Rectangle Size
+    threshold = 100  # Long Line Remove Precision
+    min_line_length = 100  # Long Line Remove  Minimum Line Length
+    max_line_gap = 5  # Long Line Remove Maximum Line Gap
+
     # todo 위 경우 말고도 각각 메서드마다 적용되는 cv2.ABCDE 형식의 상수값도 모두 조정해줄 수 있어야한다.
 
-    file_path = PATH_SAMPLE_DIRECTORY + "ad_text2.jpg"
+    file_path = PATH_SAMPLE_DIRECTORY + "car.png"
     resulst_file_name = "block_s-" + str(block_size) + "subt-" + str(subtract_val) + ".png"
     image = open_original(file_path)
-    # image = cv2.resize(image, (512, 512))
+    # image = cv2.resize(image, (512, 712))
 
     # Grey-Scale
     image_gray = get_gray(image)
     show_window(image_gray, 'image_gray')  # show
+    save_image(image_gray, '_gray.png')  # save image as a file
+
+    contours = get_contours(image_gray)
+    image_with_contours = draw_contour_rect(image, contours, min_width, min_height)
+    show_window(image_with_contours, "result")  # show
 
     # Morph Gradient
     image_gradient = get_gradient(image_gray, gradient_kernel_size_row, gradient_kernel_size_col)
     show_window(image_gradient, "image_gradient")  # show
+    save_image(image_gradient, '_gradient.png')  # save image as a file
+
+    contours = get_contours(image_gradient)
+    image_with_contours = draw_contour_rect(image, contours, min_width, min_height)
+    show_window(image_with_contours, "result")  # show
 
     # Threshold
     image_threshold = get_adaptive_mean_threshold(image_gradient, block_size, subtract_val)
     show_window(image_threshold, "adaptive_threshold")  # show
+    save_image(image_threshold, '_threshold.png')  # save image as a file
+
+    contours = get_contours(image_threshold)
+    image_with_contours = draw_contour_rect(image, contours, min_width, min_height)
+    show_window(image_with_contours, "result")  # show
 
     # Morph Close
     image_close = get_closing(image_threshold, close_kernel_size_row, close_kernel_size_col)
     show_window(image_close, "image_close")  # show
+    save_image(image_close, '_close.png')  # save image as a file
+
+    contours = get_contours(image_close)
+    image_with_contours = draw_contour_rect(image, contours, min_width, min_height)
+    show_window(image_with_contours, "result")  # show
+
+    # Long line remove
+    remove_vertical_line(image_close, threshold, min_line_length, max_line_gap)
+    show_window(image_close, "removed line")
+    save_image(image_close, '_remove_line.png')  # save image as a file
 
     # Contours
     contours = get_contours(image_close)
     image_with_contours = draw_contour_rect(image, contours, min_width, min_height)
     show_window(image_with_contours, "result")  # show
+    save_image(image_with_contours, '_contour.png')  # save image as a file
 
     # Gray
-    save_image(image_gray, 'ad_text2_gray.png')  # save image as a file
     # Gradient
-    save_image(image_gradient, 'ad_text2_gradient.png')  # save image as a file
     # Adaptive Threshold  (Binary Invert)
-    save_image(image_threshold, 'ad_text2_Adaptive Threshold.png')  # save image as a file
     # Close
-    save_image(image_close, 'ad_text2_Close.png')  # save image as a file
     # Contours
-    save_image(image_with_contours, 'ad_text2_result.png')
+
     return None
 
 
