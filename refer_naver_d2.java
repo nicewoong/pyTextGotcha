@@ -1,5 +1,5 @@
 
-class PreProcess() {
+class PreProcess {
 
     private void testContour(Mat imageMat) {
         Mat rgb = new Mat();  //rgb color matrix
