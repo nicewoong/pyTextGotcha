@@ -1,7 +1,4 @@
 # configuration for image pre-processing using OpenCV
-#path:
-#    image_resource: "images/"
-#    image_result: "result/"
 
 threshold:
     block_size: 9 # Threshold (Odd number !!)
