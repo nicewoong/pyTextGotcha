@@ -1,4 +1,6 @@
-
+/*
+See : http://d2.naver.com/helloworld/8344782
+*/
 class PreProcess {
 
     private void testContour(Mat imageMat) {
