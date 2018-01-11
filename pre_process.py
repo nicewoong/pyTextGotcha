@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 import yaml
 from matplotlib import pyplot as plt
-
+from matplotlib.backends.backend_pdf import PdfPages
 
 # configurations to read from YAML file
 configs = None
@@ -32,7 +32,7 @@ def print_configs():
 
 def resize(image):
     # todo get config from yml file
-    max_height = 400
+    max_height = 800
     # get image size
     height, width = image.shape[:2]
     # print original size
@@ -194,74 +194,70 @@ def save_image(image, file_path):
     cv2.imwrite(file_path, image)
 
 
-def process_image():
-    """ 영향을 미치는 변수를 다양하게 적용해보면서 맞추어야 합니다.
-    :return:
-    """
-    file_path = "images/car.png"
+def merge_horizontal(image, image_contours):
+    numpy_horizontal = np.hstack((image, image_contours))
+    # numpy_horizontal_concat = np.concatenate((image, image_contours), axis=1)
+    return numpy_horizontal
+
+
+def merge_compared_images(images):
+    # Merge images
+    image_gray = np.hstack((images[0], images[1]))
+    image_gradient = np.hstack((images[2], images[3]))
+    image_threshold = np.hstack((images[4], images[5]))
+    image_close = np.hstack((images[6], images[7]))
+    image_line= np.hstack((images[8], images[9]))
+    image_merged = np.vstack((image_gray, image_gradient, image_threshold, image_close, image_line))
+    return image_merged
+
+
+def process_image(file_path):
     image = open_original(file_path)
 
     # Grey-Scale
     image_gray = get_gray(image)
-    show_window(image_gray, 'image_gray')  # show
-    save_image(image_gray, '_gray.png')  # save image as a file
-
     contours = get_contours(image_gray)
     image_with_contours = draw_contour_rect(image, contours)
-    show_window(image_with_contours, "result")  # show
+    show_window(merge_horizontal(image_gray, image_with_contours), 'image_gray')  # show
 
-    # Morph Gradient
-    image_gradient = get_gradient(image_gray)
-    show_window(image_gradient, "image_gradient")  # show
-    save_image(image_gradient, '_gradient.png')  # save image as a file
-
-    contours = get_contours(image_gradient)
-    image_with_contours = draw_contour_rect(image, contours)
-    show_window(image_with_contours, "result")  # show
-
-    # Threshold
-    image_threshold = get_adaptive_mean_threshold(image_gradient)
-    show_window(image_threshold, "adaptive_threshold")  # show
-    save_image(image_threshold, '_threshold.png')  # save image as a file
-
-    contours = get_contours(image_threshold)
-    image_with_contours = draw_contour_rect(image, contours)
-    show_window(image_with_contours, "result")  # show
-
-    # Morph Close
-    image_close = get_closing(image_threshold)
-    show_window(image_close, "image_close")  # show
-    save_image(image_close, '_close.png')  # save image as a file
-
-    contours = get_contours(image_close)
-    image_with_contours = draw_contour_rect(image, contours)
-    show_window(image_with_contours, "result")  # show
-
-    # Long line remove
-    remove_vertical_line(image_close)
-    show_window(image_close, "removed line")
-    save_image(image_close, '_remove_line.png')  # save image as a file
-
-    # Contours
-    contours = get_contours(image_close)
-    image_with_contours = draw_contour_rect(image, contours)
-    show_window(image_with_contours, "result")  # show
-    save_image(image_with_contours, '_contour.png')  # save image as a file
-
-    return None
-
-
-def test_resize():
-    file_path = "images/car.png"
-    image = open_original(file_path)
-    image = resize(image)
-    show_window(image, "result")  # show
+    #
+    # # Morph Gradient
+    # image_gradient = get_gradient(image_gray)
+    # show_window(image_gradient, "image_gradient")  # show
+    #
+    # contours = get_contours(image_gradient)
+    # image_with_contours = draw_contour_rect(image, contours)
+    #
+    # # Threshold
+    # image_threshold = get_adaptive_mean_threshold(image_gradient)
+    # show_window(image_threshold, "adaptive_threshold")  # show
+    #
+    # contours = get_contours(image_threshold)
+    # image_with_contours = draw_contour_rect(image, contours)
+    #
+    # # Morph Close
+    # image_close = get_closing(image_threshold)
+    # show_window(image_close, "image_close")  # show
+    #
+    # contours = get_contours(image_close)
+    # image_with_contours = draw_contour_rect(image, contours)
+    #
+    # # Long line remove
+    # remove_vertical_line(image_close)
+    # show_window(image_close, "removed line")
+    #
+    # # Contours
+    # contours = get_contours(image_close)
+    # image_with_contours = draw_contour_rect(image, contours)
+    # show_window(image_with_contours, "result")  # show
+    #
+    # # save_image(image_with_contours, '_contour.png')  # save image as a file
 
 
 def main():
     read_configs('config.yml')
     print_configs()
-    test_resize()
+    process_image('images/test3.jpg')
 
 
 if __name__ == "__main__":
