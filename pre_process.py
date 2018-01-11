@@ -30,10 +30,20 @@ threshold시 block size는 3을 사용했습니다.
 __author__ = "Woongje Han (niewoong)"
 import cv2
 import numpy as np
+import yaml
 from matplotlib import pyplot as plt
 
 
 PATH_SAMPLE_DIRECTORY = "C:/Users/viva/PycharmProjects/py-text-gotcha/images/"
+
+
+def print_configuration(config_file):
+    with open(config_file, 'r') as yml_file:
+        configs = yaml.load(yml_file)
+
+    for section in configs:
+        print(section)
+        print(configs[section])
 
 
 def open_original(file_path):
@@ -163,7 +173,7 @@ def save_image(image, file_path):
     cv2.imwrite(file_path, image)
 
 
-def main():
+def process_image():
     """ 영향을 미치는 변수를 다양하게 적용해보면서 맞추어야 합니다.
     :return:
     """
@@ -240,6 +250,10 @@ def main():
     # Contours
 
     return None
+
+
+def main():
+    print_configuration('config.yml')
 
 
 if __name__ == "__main__":
