@@ -1,11 +1,26 @@
-mysql:
-    host: localhost
-    user: root
-    passwd: my secret password
-    db: write-math
-other:
-    preprocessing_queue:
-        - preprocessing.scale_and_center
-        - preprocessing.dot_reduction
-        - preprocessing.connect_lines
-    use_anonymous: yes
+# configuration for image pre-processing using OpenCV
+#path:
+#    image_resource: "images/"
+#    image_result: "result/"
+
+threshold:
+    block_size: 9 # Threshold (Odd number !!)
+    subtract_val: 12  # Threshold
+
+gradient:
+    kernel_size_row: 2  # Gradient Kernel Size
+    kernel_size_col: 2  # Gradient Kernel Size
+
+close:
+    kernel_size_row: 2  # Closing Kernel Size
+    kernel_size_col: 2  # Closing Kernel Size
+
+remove_line:
+    threshold: 100  # Long Line Remove Precision
+    min_line_length: 100  # Long Line Remove  Minimum Line Length
+    max_line_gap: 5  # Long Line Remove Maximum Line Gap
+
+contour:
+    min_width: 4  # Minimum Contour Rectangle Size
+    min_height: 10  # Minimum Contour Rectangle Size
+
