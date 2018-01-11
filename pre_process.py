@@ -2,28 +2,6 @@
 # -*- coding: utf-8 -*-
 """  Detect text in the image.
 And processes the image to extract the text portions using OpenCV-Python and CNN.
-
-1) Gray Scale 적용
-2) Gradient 추출
-3) Adaptive Threshold 적용
-4) Close 적용
-5) Long Line remove 적용
-6) 위 단계를 모두 거친 image 로부터 Contour 추출
-7) Contours 들 중 최소 사이즈 이상인 것들만 사각형(Rectangle)으로 원본이미지에 그리기
-
-(본문에서)
-저같은 경우,
-
-gradient시 Kernel size는2 x 2
-close시 Kernel size는 9 x 5
-threshold시 block size는 3을 사용했습니다.
-
-
-
-++++++++ 그 다음 생각하자 +++++++
-8) Rectangle 표시된 부분 자르기
-9) CNN 통해서 판별하기. 해당 Rectangle 이 text 인지 아닌지
-
 """
 __author__ = "Woongje Han (niewoong)"
 import cv2
@@ -32,7 +10,7 @@ import yaml
 from matplotlib import pyplot as plt
 
 
-# configurations
+# configurations to read from YAML file
 configs = None
 
 
@@ -52,9 +30,25 @@ def print_configs():
         print(configs[section])
 
 
+def resize(image):
+    # todo get config from yml file
+    max_height = 400
+    # get image size
+    height, width = image.shape[:2]
+    # print original size
+    print("width : " + str(width) + ", height : " + str(height))
+    # resize if too large
+    if height > max_height:
+        rate = max_height / height
+        w = round(width * rate)  # should be integer
+        h = round(height * rate)  # should be integer
+        image = cv2.resize(image, (w, h))
+        print("width : " + str(w) + ", height : " + str(h))
+    return image
+
+
 def open_original(file_path):
     """ image file 을 읽어들여서 image 객체를 반환합니다.
-    file_path 는 절대경로를 입력해야 합니다. todo (추후 확인 필요)
     """
     image_origin = cv2.imread(file_path)
     return image_origin
@@ -186,11 +180,12 @@ def draw_contour_rect(image, contours):
 def show_window(image, title):
     """ 윈도우를 열어서 이미지를 보여줍니다.
     """
-    cv2.namedWindow(title, cv2.WINDOW_NORMAL)  # 사용자가 크기 조절할 수 있는 윈도우 생성
-    # cv2.resizeWindow(title, 300, 500)  todo 이미지 비율을 그대로 하면서 사이즈를 줄일 수 있도록 하라. getSize 찾아봐
-    cv2.imshow(title, image)
-    cv2.waitKey(0)  # 키보드 입력될 때 까지 계속 기다림
-    cv2.destroyAllWindows()  # 이미지 윈도우 닫기
+    height, width = image.shape[:2]  # get image size
+    cv2.namedWindow(title, cv2.WINDOW_NORMAL)  # Create a window that the user can resize
+    cv2.resizeWindow(title, width, height)  # resize window according to the size of the image
+    cv2.imshow(title, image)  # open image window
+    cv2.waitKey(0)  # Continue to wait until keyboard input
+    cv2.destroyAllWindows()
 
 
 def save_image(image, file_path):
@@ -205,7 +200,6 @@ def process_image():
     """
     file_path = "images/car.png"
     image = open_original(file_path)
-    # image = cv2.resize(image, (512, 712))
 
     # Grey-Scale
     image_gray = get_gray(image)
@@ -257,10 +251,17 @@ def process_image():
     return None
 
 
+def test_resize():
+    file_path = "images/car.png"
+    image = open_original(file_path)
+    image = resize(image)
+    show_window(image, "result")  # show
+
+
 def main():
     read_configs('config.yml')
     print_configs()
-    process_image()
+    test_resize()
 
 
 if __name__ == "__main__":
