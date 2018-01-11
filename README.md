@@ -55,7 +55,9 @@
 * 본문에서 사용한 configure value 는 아래와 같다고 한다.
 
 > gradient시 Kernel size는2 x 2.
+
 > close시 Kernel size는 9 x 5.
+
 > threshold시 block size는 3을 사용했습니다.
 
 
