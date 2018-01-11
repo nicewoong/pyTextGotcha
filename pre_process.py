@@ -7,7 +7,7 @@ And processes the image to extract the text portions using OpenCV-Python and CNN
 2) Gradient 추출
 3) Adaptive Threshold 적용
 4) Close 적용
-todo 5) Long Line remove 적용 (미적용)
+5) Long Line remove 적용
 6) 위 단계를 모두 거친 image 로부터 Contour 추출
 7) Contours 들 중 최소 사이즈 이상인 것들만 사각형(Rectangle)으로 원본이미지에 그리기
 
@@ -15,9 +15,7 @@ todo 5) Long Line remove 적용 (미적용)
 저같은 경우,
 
 gradient시 Kernel size는2 x 2
-
 close시 Kernel size는 9 x 5
-
 threshold시 block size는 3을 사용했습니다.
 
 
@@ -34,15 +32,23 @@ import yaml
 from matplotlib import pyplot as plt
 
 
-PATH_SAMPLE_DIRECTORY = "C:/Users/viva/PycharmProjects/py-text-gotcha/images/"
+# configurations
+configs = None
 
 
-def print_configuration(config_file):
+def read_configs(config_file):
     with open(config_file, 'r') as yml_file:
-        configs = yaml.load(yml_file)
+        configurations = yaml.load(yml_file)
 
+    global configs
+    configs = configurations
+    return configurations
+
+
+def print_configs():
+    global configs
     for section in configs:
-        print(section)
+        print(section + ":")
         print(configs[section])
 
 
@@ -191,7 +197,7 @@ def process_image():
 
     # todo 위 경우 말고도 각각 메서드마다 적용되는 cv2.ABCDE 형식의 상수값도 모두 조정해줄 수 있어야한다.
 
-    file_path = PATH_SAMPLE_DIRECTORY + "car.png"
+    file_path = "images/car.png"
     resulst_file_name = "block_s-" + str(block_size) + "subt-" + str(subtract_val) + ".png"
     image = open_original(file_path)
     # image = cv2.resize(image, (512, 712))
@@ -253,7 +259,8 @@ def process_image():
 
 
 def main():
-    print_configuration('config.yml')
+    read_configs('config.yml')
+    print_configs()
 
 
 if __name__ == "__main__":
