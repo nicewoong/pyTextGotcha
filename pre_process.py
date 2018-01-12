@@ -201,58 +201,67 @@ def merge_horizontal(image_gray, image_contours):
     return numpy_horizontal
 
 
-def merge_compared_images(images):
-    # Merge images
-    image_gray = np.hstack((images[0], images[1]))
-    image_gradient = np.hstack((images[2], images[3]))
-    image_threshold = np.hstack((images[4], images[5]))
-    image_close = np.hstack((images[6], images[7]))
-    image_line= np.hstack((images[8], images[9]))
-    image_merged = np.vstack((image_gray, image_gradient, image_threshold, image_close, image_line))
-    return image_merged
+def merge_vertical(image_gray, image_contours):
+    # Make the grey scale image have three channels
+    image_cr = cv2.cvtColor(image_gray, cv2.COLOR_GRAY2BGR)
+    # Merge image horizontally
+    numpy_vertical = np.vstack((image_cr, image_contours))
+    return numpy_vertical
 
 
 def process_image(file_path):
-    image = open_original(file_path)
-    image = resize(image)
+    image_origin = open_original(file_path)
+    image_origin = resize(image_origin)
+    comparing_images = []
+
     # Grey-Scale
-    image_gray = get_gray(image)
+    image_gray = get_gray(image_origin)
     contours = get_contours(image_gray)
-    image_with_contours = draw_contour_rect(image, contours)
+    image_with_contours = draw_contour_rect(image_origin, contours)
+
+    compare_set = merge_vertical(image_gray, image_with_contours)
+    comparing_images.append(compare_set)
     show_window(merge_horizontal(image_gray, image_with_contours), 'image_gray')  # show
 
-    #
-    # # Morph Gradient
-    # image_gradient = get_gradient(image_gray)
-    # show_window(image_gradient, "image_gradient")  # show
-    #
-    # contours = get_contours(image_gradient)
-    # image_with_contours = draw_contour_rect(image, contours)
-    #
-    # # Threshold
-    # image_threshold = get_adaptive_mean_threshold(image_gradient)
-    # show_window(image_threshold, "adaptive_threshold")  # show
-    #
-    # contours = get_contours(image_threshold)
-    # image_with_contours = draw_contour_rect(image, contours)
-    #
-    # # Morph Close
-    # image_close = get_closing(image_threshold)
-    # show_window(image_close, "image_close")  # show
-    #
-    # contours = get_contours(image_close)
-    # image_with_contours = draw_contour_rect(image, contours)
-    #
-    # # Long line remove
-    # remove_vertical_line(image_close)
-    # show_window(image_close, "removed line")
-    #
-    # # Contours
-    # contours = get_contours(image_close)
-    # image_with_contours = draw_contour_rect(image, contours)
-    # show_window(image_with_contours, "result")  # show
-    #
-    # # save_image(image_with_contours, '_contour.png')  # save image as a file
+    # Morph Gradient
+    image_gradient = get_gradient(image_gray)
+    contours = get_contours(image_gradient)
+    image_with_contours = draw_contour_rect(image_origin, contours)
+
+    compare_set = merge_vertical(image_gradient, image_with_contours)
+    comparing_images.append(compare_set)
+    show_window(merge_horizontal(image_gradient, image_with_contours), 'image_gradient')  # show
+
+    # Threshold
+    image_threshold = get_adaptive_mean_threshold(image_gradient)
+    contours = get_contours(image_threshold)
+    image_with_contours = draw_contour_rect(image_origin, contours)
+
+    compare_set = merge_vertical(image_threshold, image_with_contours)
+    comparing_images.append(compare_set)
+    show_window(merge_horizontal(image_threshold, image_with_contours), 'image_threshold')  # show
+
+    # Morph Close
+    image_close = get_closing(image_threshold)
+    contours = get_contours(image_close)
+    image_with_contours = draw_contour_rect(image_origin, contours)
+
+    compare_set = merge_vertical(image_close, image_with_contours)
+    comparing_images.append(compare_set)
+    show_window(merge_horizontal(image_close, image_with_contours), 'image_close')  # show
+
+    # Long line remove
+    remove_vertical_line(image_close)
+    contours = get_contours(image_close)
+    image_with_contours = draw_contour_rect(image_origin, contours)
+
+    compare_set = merge_vertical(image_close, image_with_contours)
+    comparing_images.append(compare_set)
+    show_window(merge_horizontal(image_close, image_with_contours), 'remove_vertical_line')  # show
+
+    image_merged_all = np.hstack(comparing_images)
+    show_window(image_merged_all, 'remove_vertical_line')  # show
+    save_image(image_merged_all, '_contour.png')  # save image as a file
 
 
 def main():
