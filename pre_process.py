@@ -33,18 +33,26 @@ def print_configs():
 
 def resize(image):
     # todo get max_height max_width from yml file and apply it to resource
-    max_height = 800
+    global configs
+    max_height = configs['resize_origin']['max_height']
+    max_width = configs['resize_origin']['max_width']
     # get image size
     height, width = image.shape[:2]
     # print original size
     print("width : " + str(width) + ", height : " + str(height))
-    # resize if too large  todo apply max_width also
+    # resize if too large
     if height > max_height:
         rate = max_height / height
         w = round(width * rate)  # should be integer
         h = round(height * rate)  # should be integer
         image = cv2.resize(image, (w, h))
-        print("width : " + str(w) + ", height : " + str(h))
+        print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
+    elif width > max_width:
+        rate = max_width / width
+        w = round(width * rate)  # should be integer
+        h = round(height * rate)  # should be integer
+        image = cv2.resize(image, (w, h))
+        print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
     return image
 
 
@@ -74,32 +82,25 @@ def get_gradient(image_gray):
     return image_gradient
 
 
-def get_adaptive_gaussian_threshold(image_gray):
-    """ Gray-scale 이 적용된 이미지를 입력받아서 Adaptive Threshold 를 적용한 흑백(Binary) 이미지객체를 반환합니다.
-
-    :param image_gray: Gray-scale 이 적용된 이미지객체
-    :return: Adaptive Threshold 를 적용한 흑백(Binary) 이미지객체
-    """
-    # get configs
-    global configs
-    block_size = configs['threshold']['block_size']
-    subtract_val = configs['threshold']['subtract_val']
-    # adaptive threshold
-    image_adaptive_gaussian = cv2.adaptiveThreshold(image_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, block_size, subtract_val)
-    return image_adaptive_gaussian
-
-
-def get_adaptive_mean_threshold(image_gray):
+def get_threshold(image_gray):
     """ Gray-scale 이 적용된 이미지를 입력받아서 Adaptive Threshold 를 적용한 흑백(Binary) 이미지객체를 반환합니다.
     todo cv2.adaptiveThreshold() 의 세 번째 인자를 configuration file 을 통해 설정할 수 있도록 하고 메서드를 하나로 통일하기
     """
     # get configs
     global configs
+    mode = configs['threshold']['mode']
     block_size = configs['threshold']['block_size']
     subtract_val = configs['threshold']['subtract_val']
-    # adaptive threshold
-    image_adaptive_mean = cv2.adaptiveThreshold(image_gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, block_size, subtract_val)
-    return image_adaptive_mean
+
+    if mode == 'mean':
+        # adaptive threshold - mean
+        image_threshold = cv2.adaptiveThreshold(image_gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                                        cv2.THRESH_BINARY_INV, block_size, subtract_val)
+    elif mode == 'gaussian':
+        image_threshold = cv2.adaptiveThreshold(image_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                        cv2.THRESH_BINARY_INV, block_size, subtract_val)
+
+    return image_threshold
 
 
 def get_global_threshold(image_gray):
@@ -143,6 +144,7 @@ def get_contours(image_threshold):
 
 
 def remove_vertical_line(image):
+    # todo Consider removing the vertical line mainly. Horizontal lines should only remove large proportions in image
     # get configs
     global configs
     threshold = configs['remove_line']['threshold']
@@ -169,7 +171,7 @@ def draw_contour_rect(image, contours):
     # Draw bounding rectangles
     for contour in contours:
         x, y, width, height = cv2.boundingRect(contour)  # 좌상단 꼭지점 좌표 , width, height
-        # todo Rect 의 size 가 기준 이상인 것만 이미지 위에 그리기
+        # Rect 의 size 가 기준 이상인 것만 이미지 위에 그리기
         if width > min_width and height > min_height:
             cv2.rectangle(image, (x, y), (x+width, y+height), (0, 255, 0), 2)  # 원본 이미지 위에 사각형 그리기!
 
@@ -238,7 +240,7 @@ def process_image(resource_dir, filename_prefix, extension):
     # show_window(merge_horizontal(image_gradient, image_with_contours), 'image_gradient')  # show
 
     # Threshold
-    image_threshold = get_adaptive_mean_threshold(image_gradient)
+    image_threshold = get_threshold(image_gradient)
     contours = get_contours(image_threshold)
     image_with_contours = draw_contour_rect(image_origin, contours)
 

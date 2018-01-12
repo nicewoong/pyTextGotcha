@@ -1,7 +1,12 @@
 # configuration for image pre-processing using OpenCV
 
+resize_origin:
+    max_width: 600
+    max_height: 600
+
 threshold:
-    block_size: 9 # Threshold (Odd number !!)
+    mode: mean  # global, mean, gaussian
+    block_size: 9  # Threshold (Odd number !!)
     subtract_val: 12  # Threshold
 
 gradient:
