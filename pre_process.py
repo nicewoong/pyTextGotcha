@@ -7,8 +7,6 @@ __author__ = "Woongje Han (niewoong)"
 import cv2
 import numpy as np
 import yaml
-from matplotlib import pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
 
 # configurations to read from YAML file
 configs = None
@@ -194,8 +192,11 @@ def save_image(image, file_path):
     cv2.imwrite(file_path, image)
 
 
-def merge_horizontal(image, image_contours):
-    numpy_horizontal = np.hstack((image, image_contours))
+def merge_horizontal(image_gray, image_contours):
+    # Make the grey scale image have three channels
+    image_cr = cv2.cvtColor(image_gray, cv2.COLOR_GRAY2BGR)
+    # Merge image horizontally
+    numpy_horizontal = np.hstack((image_cr, image_contours))
     # numpy_horizontal_concat = np.concatenate((image, image_contours), axis=1)
     return numpy_horizontal
 
@@ -213,7 +214,7 @@ def merge_compared_images(images):
 
 def process_image(file_path):
     image = open_original(file_path)
-
+    image = resize(image)
     # Grey-Scale
     image_gray = get_gray(image)
     contours = get_contours(image_gray)
