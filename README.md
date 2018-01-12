@@ -43,6 +43,17 @@
     contour:
         min_width: 4  # Minimum Contour Rectangle Size
         min_height: 10  # Minimum Contour Rectangle Size
+        retrieve_mode: 0  # RETR_EXTERNAL
+                        # RETR_EXTERNAL = 0
+                        # RETR_LIST = 1
+                        # RETR_CCOMP = 2
+                        # RETR_TREE = 3
+                        # RETR_FLOODFILL = 4
+        approx_method: 2  # CHAIN_APPROX_SIMPLE
+                        # CHAIN_APPROX_NONE = 1
+                        # CHAIN_APPROX_SIMPLE = 2
+                        # CHAIN_APPROX_TC89_KCOS = 4
+                        # CHAIN_APPROX_TC89_L1 = 3
 
 
 

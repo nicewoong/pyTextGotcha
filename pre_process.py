@@ -32,13 +32,13 @@ def print_configs():
 
 
 def resize(image):
-    # todo get max_height from yml file
+    # todo get max_height max_width from yml file and apply it to resource
     max_height = 800
     # get image size
     height, width = image.shape[:2]
     # print original size
     print("width : " + str(width) + ", height : " + str(height))
-    # resize if too large
+    # resize if too large  todo apply max_width also
     if height > max_height:
         rate = max_height / height
         w = round(width * rate)  # should be integer
@@ -132,15 +132,13 @@ def get_closing(image_gray):
 
 
 def get_contours(image_threshold):
-    """ Threshold 가 적용된 이미지에 대하여 contour 를 추출하여 dictionary 형태로 반환합니다.
-    todo cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE 옵션도 configuration 에서 설정할 수 있도록 하라
+    """ Threshold 가 적용된 이미지에 대하여 contour 리스트를 추출하여 dictionary 형태로 반환합니다.
+    todo Consider that retrieve_mode and approx_method can be changed by constant values ​​defined in cv2
     """
-    # contours는 point의 list형태.
-    # hierarchy는 contours line의 계층 구조
-    # Threshold 적용한 이미지에서 contour 들을 찾아서 contours 변수에 저장하기
-    # _, contours, _ = cv2.findContours(image_threshold, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-    # _, contours, _ = cv2.findContours(image_threshold, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
-    _, contours, _ = cv2.findContours(image_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    global configs
+    retrieve_mode = configs['contour']['retrieve_mode']  # integer
+    approx_method = configs['contour']['approx_method']  # integer
+    _, contours, _ = cv2.findContours(image_threshold, retrieve_mode, approx_method)
     return contours
 
 

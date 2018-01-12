@@ -20,4 +20,7 @@ remove_line:
 contour:
     min_width: 4  # Minimum Contour Rectangle Size
     min_height: 10  # Minimum Contour Rectangle Size
+    retrieve_mode: 0  # RETR_EXTERNAL
+    approx_method: 2  # CHAIN_APPROX_SIMPLE
+
 
