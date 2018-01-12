@@ -3,10 +3,13 @@
 """  Detect text in the image.
 And processes the image to extract the text portions using OpenCV-Python and CNN.
 """
+import datetime
+
 __author__ = "Woongje Han (niewoong)"
 import cv2
 import numpy as np
 import yaml
+import os
 
 # configurations to read from YAML file
 configs = None
@@ -29,7 +32,7 @@ def print_configs():
 
 
 def resize(image):
-    # todo get config from yml file
+    # todo get max_height from yml file
     max_height = 800
     # get image size
     height, width = image.shape[:2]
@@ -186,9 +189,12 @@ def show_window(image, title):
     cv2.destroyAllWindows()
 
 
-def save_image(image, file_path):
+def save_image(image, name_prefix):
     """ 이미지를 file 로 저장합니다.
     """
+    d_date = datetime.datetime.now()
+    current_datetime = d_date.strftime("%Y%m%d%I%M%S")
+    file_path = "results/" + name_prefix + "_" + current_datetime + ".png"
     cv2.imwrite(file_path, image)
 
 
@@ -209,8 +215,9 @@ def merge_vertical(image_gray, image_contours):
     return numpy_vertical
 
 
-def process_image(file_path):
-    image_origin = open_original(file_path)
+def process_image(resource_dir, filename_prefix, extension):
+    resource = resource_dir + filename_prefix + extension
+    image_origin = open_original(resource)
     image_origin = resize(image_origin)
     comparing_images = []
 
@@ -221,7 +228,7 @@ def process_image(file_path):
 
     compare_set = merge_vertical(image_gray, image_with_contours)
     comparing_images.append(compare_set)
-    show_window(merge_horizontal(image_gray, image_with_contours), 'image_gray')  # show
+    # show_window(merge_horizontal(image_gray, image_with_contours), 'image_gray')  # show
 
     # Morph Gradient
     image_gradient = get_gradient(image_gray)
@@ -230,7 +237,7 @@ def process_image(file_path):
 
     compare_set = merge_vertical(image_gradient, image_with_contours)
     comparing_images.append(compare_set)
-    show_window(merge_horizontal(image_gradient, image_with_contours), 'image_gradient')  # show
+    # show_window(merge_horizontal(image_gradient, image_with_contours), 'image_gradient')  # show
 
     # Threshold
     image_threshold = get_adaptive_mean_threshold(image_gradient)
@@ -239,7 +246,7 @@ def process_image(file_path):
 
     compare_set = merge_vertical(image_threshold, image_with_contours)
     comparing_images.append(compare_set)
-    show_window(merge_horizontal(image_threshold, image_with_contours), 'image_threshold')  # show
+    # show_window(merge_horizontal(image_threshold, image_with_contours), 'image_threshold')  # show
 
     # Morph Close
     image_close = get_closing(image_threshold)
@@ -248,7 +255,7 @@ def process_image(file_path):
 
     compare_set = merge_vertical(image_close, image_with_contours)
     comparing_images.append(compare_set)
-    show_window(merge_horizontal(image_close, image_with_contours), 'image_close')  # show
+    # show_window(merge_horizontal(image_close, image_with_contours), 'image_close')  # show
 
     # Long line remove
     remove_vertical_line(image_close)
@@ -257,17 +264,25 @@ def process_image(file_path):
 
     compare_set = merge_vertical(image_close, image_with_contours)
     comparing_images.append(compare_set)
-    show_window(merge_horizontal(image_close, image_with_contours), 'remove_vertical_line')  # show
+    # show_window(merge_horizontal(image_close, image_with_contours), 'remove_vertical_line')  # show
 
     image_merged_all = np.hstack(comparing_images)
-    show_window(image_merged_all, 'remove_vertical_line')  # show
-    save_image(image_merged_all, '_contour.png')  # save image as a file
+    show_window(image_merged_all, 'image_merged_all')  # show
+
+    save_image(image_merged_all, filename_prefix)  # save image as a file
+
+
+def execute_test_set():
+    for i in range(1, 19):  # 1 <= i < 20
+        filename_prefix = "test_" + str(i)
+        print(filename_prefix    )
+        process_image('cut_resources/', filename_prefix, ".PNG")
 
 
 def main():
     read_configs('config.yml')
     print_configs()
-    process_image('images/test3.jpg')
+    execute_test_set()
 
 
 if __name__ == "__main__":
