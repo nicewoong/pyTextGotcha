@@ -161,7 +161,7 @@ def remove_vertical_line(image):
         for line in lines:
             x1, y1, x2, y2 = line[0]  # get end point of line : ( (x1, y1) , (x2, y2) )
             # remove line drawing black line
-            cv2.line(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            image = cv2.line(image, (x1, y1), (x2, y2), (0, 0, 0), 10)
     return image
 
 
@@ -292,7 +292,7 @@ def process_image(resource_dir, filename_prefix, extension):
 
 
 def execute_test_set():
-    for i in range(1, 13):  # min <= i < max
+    for i in range(0, 13):  # min <= i < max
         filename_prefix = "test (" + str(i) + ")"
         print(filename_prefix)
         process_image('images/', filename_prefix, ".jpg")
