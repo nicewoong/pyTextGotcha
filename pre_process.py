@@ -3,13 +3,15 @@
 """  Detect text in the image.
 And processes the image to extract the text portions using OpenCV-Python and CNN.
 """
-import datetime
+
 
 __author__ = "Woongje Han (niewoong)"
 import cv2
 import numpy as np
 import yaml
-import os
+import datetime
+import pytesseract as ocr
+from PIL import Image
 
 # configurations to read from YAML file
 configs = None
@@ -183,27 +185,11 @@ def draw_contour_rect(image, contours, image_threshold):
     return image
 
 
-# def draw_contour_rect(image_origin, contours, image_threshold):
-#     # get configs
-#     global configs
-#     min_width = configs['contour']['min_width']
-#     min_height = configs['contour']['min_height']
-#
-#     mask = np.zeros(image_threshold.shape, dtype=np.uint8)
-#
-#     for idx in range(len(contours)):
-#         x, y, w, h = cv2.boundingRect(contours[idx])
-#         # fill the contour
-#         # fills the area bounded by the contours if thickness < 0.
-#         # It's done so we can check the ratio of non-zero pixels to decide if the box likely contains text
-#         mask[y:y + h, x:x + w] = 0
-#         cv2.drawContours(mask, contours, idx, (255, 255, 255), -1)
-#         # ratio of non-zero pixels in the filled region
-#         r = float(cv2.countNonZero(mask[y:y + h, x:x + w])) / (w * h)
-#
-#         if r > 0.45 and w > min_width and h > min_height:
-#             cv2.rectangle(image_origin, (x, y), (x + w - 1, y + h - 1), (0, 255, 0), 1)
-#         return image_origin
+def orc_test(image, title):
+    img = Image.fromarray(image)
+    text = ocr.image_to_string(img, lang='kor')
+    print("================ OCR result : " + title + "================")
+    print(text)
 
 
 def show_window(image, title):
@@ -252,6 +238,7 @@ def process_image(resource_dir, filename_prefix, extension):
     resource = resource_dir + filename_prefix + extension
     image_origin = open_original(resource)
     # image_origin = resize(image_origin, -1)
+    image_origin = cv2.pyrUp(image_origin)
     comparing_images = []
 
     # Grey-Scale
@@ -305,10 +292,10 @@ def process_image(resource_dir, filename_prefix, extension):
 
 
 def execute_test_set():
-    for i in range(0, 10):  # min <= i < max
-        filename_prefix = "test_" + str(i)
+    for i in range(1, 13):  # min <= i < max
+        filename_prefix = "test (" + str(i) + ")"
         print(filename_prefix)
-        process_image('cut_resources/', filename_prefix, ".PNG")
+        process_image('images/', filename_prefix, ".jpg")
 
 
 def main():
