@@ -213,7 +213,7 @@ def save_image(image, name_prefix):
     """
     d_date = datetime.datetime.now()
     current_datetime = d_date.strftime("%Y%m%d%I%M%S")
-    file_path = "results/" + name_prefix + "_" + current_datetime + ".png"
+    file_path = "results/" + name_prefix + "_" + current_datetime + ".jpg"
     cv2.imwrite(file_path, image)
 
 
@@ -287,8 +287,8 @@ def process_image(resource_dir, filename_prefix, extension):
     # show_window(merge_horizontal(image_close, image_with_contours), 'remove_vertical_line')  # show
 
     image_merged_all = np.hstack(comparing_images)
-    show_window(image_merged_all, 'image_merged_all')  # show
-    # save_image(image_merged_all, filename_prefix)  # save image as a file
+    # show_window(image_merged_all, 'image_merged_all')  # show
+    save_image(image_merged_all, filename_prefix)  # save image as a file
 
 
 def execute_test_set():
