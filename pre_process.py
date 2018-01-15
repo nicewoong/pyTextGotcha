@@ -71,11 +71,13 @@ def open_original(file_path):
 def get_gray(image_origin):
     """ image 객체를 받아서 Gray-scale 을 적용한 이미지 객체를 반환합니다.
     """
-    image_copy_grey = cv2.cvtColor(image_origin, cv2.COLOR_BGR2GRAY)  # grey scale 로 복사합니다.
+    copy = image_origin.copy()
+    image_copy_grey = cv2.cvtColor(copy, cv2.COLOR_BGR2GRAY)  # grey scale 로 복사합니다.
     return image_copy_grey
 
 
 def get_gradient(image_gray):
+    copy = image_gray.copy()
     # get configs
     global configs
     kernel_size_row = configs['gradient']['kernel_size_row']
@@ -83,7 +85,7 @@ def get_gradient(image_gray):
     # make kernel matrix for dilation and erosion
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size_row, kernel_size_col))
     # morph gradient
-    image_gradient = cv2.morphologyEx(image_gray, cv2.MORPH_GRADIENT, kernel)
+    image_gradient = cv2.morphologyEx(copy, cv2.MORPH_GRADIENT, kernel)
     return image_gradient
 
 
@@ -148,41 +150,51 @@ def get_contours(image_threshold):
     return contours
 
 
-def remove_vertical_line(image):
+def remove_vertical_line(image_binary, origin):
     # todo Consider removing the vertical line mainly. Horizontal lines should only remove large proportions in image
+    copy = image_binary.copy()
+    copy_rgb = origin.copy()
     # get configs
     global configs
     threshold = configs['remove_line']['threshold']
     min_line_length = configs['remove_line']['min_line_length']
     max_line_gap = configs['remove_line']['max_line_gap']
+
+    # height, width = copy.shape[:2]  # get image size
+    # min_line_length = height * 0.9
+    # print(min_line_length)
+
     # find lines
-    lines = cv2.HoughLinesP(image, 1, np.pi / 180, threshold, min_line_length, max_line_gap)
-    if lines is True:
+    lines = cv2.HoughLinesP(copy, 1, np.pi / 180, threshold, min_line_length, max_line_gap)
+    if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]  # get end point of line : ( (x1, y1) , (x2, y2) )
             # remove line drawing black line
-            image = cv2.line(image, (x1, y1), (x2, y2), (0, 0, 0), 10)
-    return image
+            # image = cv2.line(image, (x1, y1), (x2, y2), (0, 0, 0), 10)
+            cv2.line(copy, (x1, y1), (x2, y2), (0, 0, 0), 1)
+
+    show_window(copy)
+    return copy
 
 
-def draw_contour_rect(image, contours, image_threshold):
+def draw_contour_rect(image_origin, contours, image_threshold):
     """ 이미지위에 찾은 Contours 를 기반으로 외각사각형을 그리고 해당 이미지를 반환합니다.
     """
     # get configs
     global configs
     min_width = configs['contour']['min_width']
     min_height = configs['contour']['min_height']
-
+    rgb_copy = image_origin.copy()
     # Draw bounding rectangles
     for contour in contours:
         x, y, width, height = cv2.boundingRect(contour)  # 좌상단 꼭지점 좌표 , width, height
         # Rect 의 size 가 기준 이상인 것만 이미지 위에 그리기
         if width > min_width and height > min_height:
-            cv2.rectangle(image, (x, y), (x+width, y+height), (0, 255, 0), 2)  # 원본 이미지 위에 사각형 그리기!
+            cv2.rectangle(rgb_copy, (x, y), (x + width, y + height), (0, 255, 0), 2)  # 원본 이미지 위에 사각형 그리기!
 
     # cv2.drawContours(image, contours, -1, (0, 255, 0), 3)
 
-    return image
+    return rgb_copy
 
 
 def orc_test(image, title):
@@ -192,7 +204,7 @@ def orc_test(image, title):
     print(text)
 
 
-def show_window(image, title):
+def show_window(image, title='untitled'):
     """ 윈도우를 열어서 이미지를 보여줍니다.
     """
     height, width = image.shape[:2]  # get image size
@@ -238,7 +250,7 @@ def process_image(resource_dir, filename_prefix, extension):
     resource = resource_dir + filename_prefix + extension
     image_origin = open_original(resource)
     # image_origin = resize(image_origin, -1)
-    image_origin = cv2.pyrUp(image_origin)
+    image_origin = cv2.pyrUp(image_origin)  # size up (X4)
     comparing_images = []
 
     # Grey-Scale
@@ -278,21 +290,21 @@ def process_image(resource_dir, filename_prefix, extension):
     # show_window(merge_horizontal(image_close, image_with_contours), 'image_close')  # show
 
     # Long line remove
-    remove_vertical_line(image_close)
-    contours = get_contours(image_close)
-    image_with_contours = draw_contour_rect(image_origin, contours, image_close)
+    image_line_removed = remove_vertical_line(image_close, image_origin)
+    contours = get_contours(image_line_removed)
+    image_with_contours = draw_contour_rect(image_origin, contours, image_line_removed)
 
-    compare_set = merge_vertical(image_close, image_with_contours)
+    compare_set = merge_vertical(image_line_removed, image_with_contours)
     comparing_images.append(compare_set)
     # show_window(merge_horizontal(image_close, image_with_contours), 'remove_vertical_line')  # show
 
     image_merged_all = np.hstack(comparing_images)
     # show_window(image_merged_all, 'image_merged_all')  # show
-    save_image(image_merged_all, filename_prefix)  # save image as a file
+    # save_image(image_merged_all, filename_prefix)  # save image as a file
 
 
 def execute_test_set():
-    for i in range(0, 13):  # min <= i < max
+    for i in range(2, 4):  # min <= i < max
         filename_prefix = "test (" + str(i) + ")"
         print(filename_prefix)
         process_image('images/', filename_prefix, ".jpg")
