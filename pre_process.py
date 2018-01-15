@@ -31,29 +31,31 @@ def print_configs():
         print(configs[section])
 
 
-def resize(image):
-    # todo get max_height max_width from yml file and apply it to resource
+def resize(image, flag=-1):
+    """
+    :param image:
+    :param flag: flag > 0 이면 사이즈를 증가, flag < 0 (default)이면 사이즈를 축소한다.
+    :return:
+    """
     global configs
-    max_height = configs['resize_origin']['max_height']
-    max_width = configs['resize_origin']['max_width']
+    standard_height = configs['resize_origin']['standard_height']
+    standard_width = configs['resize_origin']['standard_width']
     # get image size
     height, width = image.shape[:2]
     # print original size
     print("width : " + str(width) + ", height : " + str(height))
-    # resize if too large
-    if height > max_height:
-        rate = max_height / height
-        w = round(width * rate)  # should be integer
-        h = round(height * rate)  # should be integer
-        image = cv2.resize(image, (w, h))
-        print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
-    elif width > max_width:
-        rate = max_width / width
-        w = round(width * rate)  # should be integer
-        h = round(height * rate)  # should be integer
-        image = cv2.resize(image, (w, h))
-        print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
-    return image
+    if (flag > 0 and height < standard_height) or (flag < 0 and height > standard_height):
+            rate = standard_height / height
+            w = round(width * rate)  # should be integer
+            h = round(height * rate)  # should be integer
+            image = cv2.resize(image, (w, h))
+            print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
+    elif (flag > 0 and width < standard_width) or (flag < 0 and height > standard_height):
+            rate = standard_width / width
+            w = round(width * rate)  # should be integer
+            h = round(height * rate)  # should be integer
+            image = cv2.resize(image, (w, h))
+            print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
 
 
 def open_original(file_path):
@@ -99,12 +101,14 @@ def get_threshold(image_gray):
     elif mode == 'gaussian':
         image_threshold = cv2.adaptiveThreshold(image_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                                         cv2.THRESH_BINARY_INV, block_size, subtract_val)
+    elif mode == 'global':
+        image_threshold = get_global_threshold(image_gray)
 
     return image_threshold
 
 
 def get_global_threshold(image_gray):
-    ret, binary_image = cv2.threshold(image_gray, 127, 255, cv2.THRESH_BINARY)
+    ret, binary_image = cv2.threshold(image_gray, 180, 255, cv2.THRESH_BINARY)
     return binary_image
 
 
@@ -152,16 +156,16 @@ def remove_vertical_line(image):
     max_line_gap = configs['remove_line']['max_line_gap']
     # find lines
     lines = cv2.HoughLinesP(image, 1, np.pi / 180, threshold, min_line_length, max_line_gap)
-    for line in lines:
-        x1, y1, x2, y2 = line[0]  # get end point of line : ( (x1, y1) , (x2, y2) )
-        # remove line drawing black line
-        cv2.line(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+    if lines is True:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]  # get end point of line : ( (x1, y1) , (x2, y2) )
+            # remove line drawing black line
+            cv2.line(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
     return image
 
 
 def draw_contour_rect(image, contours):
     """ 이미지위에 찾은 Contours 를 기반으로 외각사각형을 그리고 해당 이미지를 반환합니다.
-    todo contour 의 색상이나 두깨도 인자로 받아서 설정할 수 있도록 변경하기
     """
     # get configs
     global configs
@@ -174,6 +178,8 @@ def draw_contour_rect(image, contours):
         # Rect 의 size 가 기준 이상인 것만 이미지 위에 그리기
         if width > min_width and height > min_height:
             cv2.rectangle(image, (x, y), (x+width, y+height), (0, 255, 0), 2)  # 원본 이미지 위에 사각형 그리기!
+
+    # cv2.drawContours(image, contours, -1, (0, 255, 0), 3)
 
     return image
 
@@ -268,14 +274,13 @@ def process_image(resource_dir, filename_prefix, extension):
 
     image_merged_all = np.hstack(comparing_images)
     show_window(image_merged_all, 'image_merged_all')  # show
-
-    save_image(image_merged_all, filename_prefix)  # save image as a file
+    # save_image(image_merged_all, filename_prefix)  # save image as a file
 
 
 def execute_test_set():
-    for i in range(1, 19):  # 1 <= i < 20
+    for i in range(0, 10):  # min <= i < max
         filename_prefix = "test_" + str(i)
-        print(filename_prefix    )
+        print(filename_prefix)
         process_image('cut_resources/', filename_prefix, ".PNG")
 
 
