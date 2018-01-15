@@ -45,17 +45,18 @@ def resize(image, flag=-1):
     # print original size
     print("width : " + str(width) + ", height : " + str(height))
     if (flag > 0 and height < standard_height) or (flag < 0 and height > standard_height):
-            rate = standard_height / height
-            w = round(width * rate)  # should be integer
-            h = round(height * rate)  # should be integer
-            image = cv2.resize(image, (w, h))
-            print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
+        rate = standard_height / height
+        w = round(width * rate)  # should be integer
+        h = round(height * rate)  # should be integer
+        image = cv2.resize(image, (w, h))
+        print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
     elif (flag > 0 and width < standard_width) or (flag < 0 and height > standard_height):
-            rate = standard_width / width
-            w = round(width * rate)  # should be integer
-            h = round(height * rate)  # should be integer
-            image = cv2.resize(image, (w, h))
-            print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
+        rate = standard_width / width
+        w = round(width * rate)  # should be integer
+        h = round(height * rate)  # should be integer
+        image = cv2.resize(image, (w, h))
+        print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
+    return image
 
 
 def open_original(file_path):
@@ -78,7 +79,7 @@ def get_gradient(image_gray):
     kernel_size_row = configs['gradient']['kernel_size_row']
     kernel_size_col = configs['gradient']['kernel_size_col']
     # make kernel matrix for dilation and erosion
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size_row, kernel_size_col))
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size_row, kernel_size_col))
     # morph gradient
     image_gradient = cv2.morphologyEx(image_gray, cv2.MORPH_GRADIENT, kernel)
     return image_gradient
@@ -86,7 +87,6 @@ def get_gradient(image_gray):
 
 def get_threshold(image_gray):
     """ Gray-scale 이 적용된 이미지를 입력받아서 Adaptive Threshold 를 적용한 흑백(Binary) 이미지객체를 반환합니다.
-    todo cv2.adaptiveThreshold() 의 세 번째 인자를 configuration file 을 통해 설정할 수 있도록 하고 메서드를 하나로 통일하기
     """
     # get configs
     global configs
@@ -102,7 +102,7 @@ def get_threshold(image_gray):
         image_threshold = cv2.adaptiveThreshold(image_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                                         cv2.THRESH_BINARY_INV, block_size, subtract_val)
     elif mode == 'global':
-        image_threshold = get_global_threshold(image_gray)
+        image_threshold = get_otsu_threshold(image_gray)
 
     return image_threshold
 
@@ -138,7 +138,6 @@ def get_closing(image_gray):
 
 def get_contours(image_threshold):
     """ Threshold 가 적용된 이미지에 대하여 contour 리스트를 추출하여 dictionary 형태로 반환합니다.
-    todo Consider that retrieve_mode and approx_method can be changed by constant values ​​defined in cv2
     """
     global configs
     retrieve_mode = configs['contour']['retrieve_mode']  # integer
@@ -164,7 +163,7 @@ def remove_vertical_line(image):
     return image
 
 
-def draw_contour_rect(image, contours):
+def draw_contour_rect(image, contours, image_threshold):
     """ 이미지위에 찾은 Contours 를 기반으로 외각사각형을 그리고 해당 이미지를 반환합니다.
     """
     # get configs
@@ -184,10 +183,38 @@ def draw_contour_rect(image, contours):
     return image
 
 
+# def draw_contour_rect(image_origin, contours, image_threshold):
+#     # get configs
+#     global configs
+#     min_width = configs['contour']['min_width']
+#     min_height = configs['contour']['min_height']
+#
+#     mask = np.zeros(image_threshold.shape, dtype=np.uint8)
+#
+#     for idx in range(len(contours)):
+#         x, y, w, h = cv2.boundingRect(contours[idx])
+#         # fill the contour
+#         # fills the area bounded by the contours if thickness < 0.
+#         # It's done so we can check the ratio of non-zero pixels to decide if the box likely contains text
+#         mask[y:y + h, x:x + w] = 0
+#         cv2.drawContours(mask, contours, idx, (255, 255, 255), -1)
+#         # ratio of non-zero pixels in the filled region
+#         r = float(cv2.countNonZero(mask[y:y + h, x:x + w])) / (w * h)
+#
+#         if r > 0.45 and w > min_width and h > min_height:
+#             cv2.rectangle(image_origin, (x, y), (x + w - 1, y + h - 1), (0, 255, 0), 1)
+#         return image_origin
+
+
 def show_window(image, title):
     """ 윈도우를 열어서 이미지를 보여줍니다.
     """
     height, width = image.shape[:2]  # get image size
+    if height > 700:
+        rate = 700 / height
+        height = round(height * rate)
+        width = round(width * rate)
+
     cv2.namedWindow(title, cv2.WINDOW_NORMAL)  # Create a window that the user can resize
     cv2.resizeWindow(title, width, height)  # resize window according to the size of the image
     cv2.imshow(title, image)  # open image window
@@ -224,13 +251,13 @@ def merge_vertical(image_gray, image_contours):
 def process_image(resource_dir, filename_prefix, extension):
     resource = resource_dir + filename_prefix + extension
     image_origin = open_original(resource)
-    image_origin = resize(image_origin)
+    # image_origin = resize(image_origin, -1)
     comparing_images = []
 
     # Grey-Scale
     image_gray = get_gray(image_origin)
     contours = get_contours(image_gray)
-    image_with_contours = draw_contour_rect(image_origin, contours)
+    image_with_contours = draw_contour_rect(image_origin, contours, image_gray)
 
     compare_set = merge_vertical(image_gray, image_with_contours)
     comparing_images.append(compare_set)
@@ -239,7 +266,7 @@ def process_image(resource_dir, filename_prefix, extension):
     # Morph Gradient
     image_gradient = get_gradient(image_gray)
     contours = get_contours(image_gradient)
-    image_with_contours = draw_contour_rect(image_origin, contours)
+    image_with_contours = draw_contour_rect(image_origin, contours, image_gradient)
 
     compare_set = merge_vertical(image_gradient, image_with_contours)
     comparing_images.append(compare_set)
@@ -248,7 +275,7 @@ def process_image(resource_dir, filename_prefix, extension):
     # Threshold
     image_threshold = get_threshold(image_gradient)
     contours = get_contours(image_threshold)
-    image_with_contours = draw_contour_rect(image_origin, contours)
+    image_with_contours = draw_contour_rect(image_origin, contours, image_threshold)
 
     compare_set = merge_vertical(image_threshold, image_with_contours)
     comparing_images.append(compare_set)
@@ -257,7 +284,7 @@ def process_image(resource_dir, filename_prefix, extension):
     # Morph Close
     image_close = get_closing(image_threshold)
     contours = get_contours(image_close)
-    image_with_contours = draw_contour_rect(image_origin, contours)
+    image_with_contours = draw_contour_rect(image_origin, contours, image_close)
 
     compare_set = merge_vertical(image_close, image_with_contours)
     comparing_images.append(compare_set)
@@ -266,7 +293,7 @@ def process_image(resource_dir, filename_prefix, extension):
     # Long line remove
     remove_vertical_line(image_close)
     contours = get_contours(image_close)
-    image_with_contours = draw_contour_rect(image_origin, contours)
+    image_with_contours = draw_contour_rect(image_origin, contours, image_close)
 
     compare_set = merge_vertical(image_close, image_with_contours)
     comparing_images.append(compare_set)
