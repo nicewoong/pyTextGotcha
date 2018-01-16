@@ -201,7 +201,7 @@ def get_crop_images(image_origin, contours):
     global configs
     min_width = configs['contour']['min_width']
     min_height = configs['contour']['min_height']
-    margin = 7
+    margin = 15
     image_copy = image_origin.copy()
     origin_height, origin_width = image_copy.shape[:2]  # get image size
     crop_images = [image_copy]  # 자른 이미지를 하나씩 추가해서 저장할 리스트
@@ -213,11 +213,12 @@ def get_crop_images(image_origin, contours):
         # Rect 의 size 가 기준 이상인 것만 담는다
         if width > min_width and height > min_height:
             crop_row_1 = (y - margin) if (y - margin) > 0 else y
-            crop_row_2 = y + height + margin if (y + height + margin < origin_height) else height
+            crop_row_2 = (y + height + margin) if (y + height + margin) < origin_height else y + height
             crop_col_1 = (x - margin) if (x - margin) > 0 else x
-            crop_col_2 = x + width + margin if (x + width + margin < origin_width) else width
+            crop_col_2 = (x + width + margin) if (x + width + margin) < origin_width else x + width
             # 행렬은 row col 순서!!! 햇갈리지 말자!
             crop = image_copy[crop_row_1: crop_row_2, crop_col_1: crop_col_2]  # trim한 결과를 img_trim에 담는
+            # crop = image_copy[y: y+height, x: x+width]  # trim한 결과를 img_trim에 담는
             crop_images.append(crop)
     return crop_images
 
@@ -326,17 +327,17 @@ def process_image(resource_dir, filename_prefix, extension):
     # save_image(image_merged_all, filename_prefix)  # save all step image as a file
 
     # save final result
-    save_image(image_with_contours, 'final_' + filename_prefix)
+    save_image(image_with_contours, filename_prefix + '_final_')
     return get_crop_images(image_origin, contours)
 
 
 def execute_test_set():
-    for i in range(1, 2):  # min <= i < max
+    for i in range(1, 17):  # min <= i < max
         filename_prefix = "test (" + str(i) + ")"
         print(filename_prefix)
         crop_images = process_image('images/', filename_prefix, ".jpg")
         count = 0
-        f = open("results/" + filename_prefix + "_log.txt", 'w')
+        f = open("results/" + filename_prefix + "_log2.txt", 'w')
         for crop_image in crop_images:
             count += 1
             save_image(crop_image, filename_prefix + "crop_" + str(count))
