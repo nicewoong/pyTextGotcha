@@ -249,8 +249,7 @@ def merge_vertical(image_gray, image_contours):
 def process_image(resource_dir, filename_prefix, extension):
     resource = resource_dir + filename_prefix + extension
     image_origin = open_original(resource)
-    # image_origin = resize(image_origin, -1)
-    image_origin = cv2.pyrUp(image_origin)  # size up (X4)
+    image_origin = cv2.pyrUp(image_origin)  # size up ( x4 )
     comparing_images = []
 
     # Grey-Scale
@@ -260,7 +259,6 @@ def process_image(resource_dir, filename_prefix, extension):
 
     compare_set = merge_vertical(image_gray, image_with_contours)
     comparing_images.append(compare_set)
-    # show_window(merge_horizontal(image_gray, image_with_contours), 'image_gray')  # show
 
     # Morph Gradient
     image_gradient = get_gradient(image_gray)
@@ -269,8 +267,6 @@ def process_image(resource_dir, filename_prefix, extension):
 
     compare_set = merge_vertical(image_gradient, image_with_contours)
     comparing_images.append(compare_set)
-    # show_window(merge_horizontal(image_gradient, image_with_contours), 'image_gradient')  # show
-
 
     # Long line remove
     image_line_removed = remove_vertical_line(image_gradient, image_origin)
@@ -279,7 +275,6 @@ def process_image(resource_dir, filename_prefix, extension):
 
     compare_set = merge_vertical(image_line_removed, image_with_contours)
     comparing_images.append(compare_set)
-    # show_window(merge_horizontal(image_close, image_with_contours), 'remove_vertical_line')  # show
 
     # Threshold
     image_threshold = get_threshold(image_line_removed)
@@ -288,7 +283,6 @@ def process_image(resource_dir, filename_prefix, extension):
 
     compare_set = merge_vertical(image_threshold, image_with_contours)
     comparing_images.append(compare_set)
-    # show_window(merge_horizontal(image_threshold, image_with_contours), 'image_threshold')  # show
 
     # Morph Close
     image_close = get_closing(image_threshold)
@@ -297,20 +291,13 @@ def process_image(resource_dir, filename_prefix, extension):
 
     compare_set = merge_vertical(image_close, image_with_contours)
     comparing_images.append(compare_set)
-    # show_window(merge_horizontal(image_close, image_with_contours), 'image_close')  # show
-
-    # # Long line remove
-    # image_line_removed = remove_vertical_line(image_close, image_origin)
-    # contours = get_contours(image_line_removed)
-    # image_with_contours = draw_contour_rect(image_origin, contours, image_line_removed)
-    #
-    # compare_set = merge_vertical(image_line_removed, image_with_contours)
-    # comparing_images.append(compare_set)
-    # # show_window(merge_horizontal(image_close, image_with_contours), 'remove_vertical_line')  # show
 
     image_merged_all = np.hstack(comparing_images)
-    # show_window(image_merged_all, 'image_merged_all')  # show
-    save_image(image_merged_all, filename_prefix)  # save image as a file
+    show_window(image_merged_all, 'image_merged_all')  # show all step
+    # save_image(image_merged_all, filename_prefix)  # save all step image as a file
+
+    # save final result
+    # save_image(image_with_contours, 'final_' + filename_prefix)
 
 
 def execute_test_set():
