@@ -150,7 +150,7 @@ def get_contours(image_threshold):
     return contours
 
 
-def remove_vertical_line(image_binary, origin):
+def remove_long_line(image_binary, origin):
     # todo Consider removing the vertical line mainly. Horizontal lines should only remove large proportions in image
     copy = image_binary.copy()
     copy_rgb = origin.copy()
@@ -193,15 +193,44 @@ def draw_contour_rect(image_origin, contours, image_threshold):
             cv2.rectangle(rgb_copy, (x, y), (x + width, y + height), (0, 255, 0), 2)  # 원본 이미지 위에 사각형 그리기!
 
     # cv2.drawContours(image, contours, -1, (0, 255, 0), 3)
-
     return rgb_copy
 
 
-def orc_test(image, title):
+def get_crop_images(image_origin, contours):
+    # get configs
+    global configs
+    min_width = configs['contour']['min_width']
+    min_height = configs['contour']['min_height']
+    margin = 7
+    image_copy = image_origin.copy()
+    origin_height, origin_width = image_copy.shape[:2]  # get image size
+    crop_images = [image_copy]  # 자른 이미지를 하나씩 추가해서 저장할 리스트
+    # todo contour 에서 margin 을 줬을 때 이미지 원본 영역을 벗어나지 않는지 체크해야한다.
+    # todo 이미지 영역을 벗어날 경우 아래와 같은 에러 발생
+    # todo ValueError: tile cannot extend outside image
+    for contour in contours:
+        x, y, width, height = cv2.boundingRect(contour)  # 좌상단 꼭지점 좌표 , width, height
+        # Rect 의 size 가 기준 이상인 것만 담는다
+        if width > min_width and height > min_height:
+            crop_row_1 = (y - margin) if (y - margin) > 0 else y
+            crop_row_2 = y + height + margin if (y + height + margin < origin_height) else height
+            crop_col_1 = (x - margin) if (x - margin) > 0 else x
+            crop_col_2 = x + width + margin if (x + width + margin < origin_width) else width
+            # 행렬은 row col 순서!!! 햇갈리지 말자!
+            crop = image_copy[crop_row_1: crop_row_2, crop_col_1: crop_col_2]  # trim한 결과를 img_trim에 담는
+            crop_images.append(crop)
+    return crop_images
+
+
+def orc_test(image, title, f_stream=None):
     img = Image.fromarray(image)
     text = ocr.image_to_string(img, lang='kor')
-    print("================ OCR result : " + title + "================")
-    print(text)
+    if f_stream is not None:
+        f_stream.write("================ " + title + " ================ \n")
+        f_stream.write(text + "\n")
+    else:
+        print("================ OCR result : " + title + "================")
+        print(text)
 
 
 def show_window(image, title='untitled'):
@@ -269,7 +298,7 @@ def process_image(resource_dir, filename_prefix, extension):
     comparing_images.append(compare_set)
 
     # Long line remove
-    image_line_removed = remove_vertical_line(image_gradient, image_origin)
+    image_line_removed = remove_long_line(image_gradient, image_origin)
     contours = get_contours(image_line_removed)
     image_with_contours = draw_contour_rect(image_origin, contours, image_line_removed)
 
@@ -293,18 +322,26 @@ def process_image(resource_dir, filename_prefix, extension):
     comparing_images.append(compare_set)
 
     image_merged_all = np.hstack(comparing_images)
-    show_window(image_merged_all, 'image_merged_all')  # show all step
+    # show_window(image_merged_all, 'image_merged_all')  # show all step
     # save_image(image_merged_all, filename_prefix)  # save all step image as a file
 
     # save final result
-    # save_image(image_with_contours, 'final_' + filename_prefix)
+    save_image(image_with_contours, 'final_' + filename_prefix)
+    return get_crop_images(image_origin, contours)
 
 
 def execute_test_set():
-    for i in range(1, 17):  # min <= i < max
+    for i in range(1, 2):  # min <= i < max
         filename_prefix = "test (" + str(i) + ")"
         print(filename_prefix)
-        process_image('images/', filename_prefix, ".jpg")
+        crop_images = process_image('images/', filename_prefix, ".jpg")
+        count = 0
+        f = open("results/" + filename_prefix + "_log.txt", 'w')
+        for crop_image in crop_images:
+            count += 1
+            save_image(crop_image, filename_prefix + "crop_" + str(count))
+            orc_test(crop_image, filename_prefix + "crop_" + str(count), f)
+        f.close()
 
 
 def main():
