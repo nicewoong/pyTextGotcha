@@ -169,11 +169,11 @@ def remove_vertical_line(image_binary, origin):
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]  # get end point of line : ( (x1, y1) , (x2, y2) )
-            # remove line drawing black line
-            # image = cv2.line(image, (x1, y1), (x2, y2), (0, 0, 0), 10)
-            cv2.line(copy, (x1, y1), (x2, y2), (0, 0, 0), 1)
+            if x1 == x2 or y1 == y2:
+                # remove line drawing black line
+                cv2.line(copy, (x1, y1), (x2, y2), (0, 0, 0), 10)
 
-    show_window(copy)
+    # show_window(copy)
     return copy
 
 
@@ -271,8 +271,18 @@ def process_image(resource_dir, filename_prefix, extension):
     comparing_images.append(compare_set)
     # show_window(merge_horizontal(image_gradient, image_with_contours), 'image_gradient')  # show
 
+
+    # Long line remove
+    image_line_removed = remove_vertical_line(image_gradient, image_origin)
+    contours = get_contours(image_line_removed)
+    image_with_contours = draw_contour_rect(image_origin, contours, image_line_removed)
+
+    compare_set = merge_vertical(image_line_removed, image_with_contours)
+    comparing_images.append(compare_set)
+    # show_window(merge_horizontal(image_close, image_with_contours), 'remove_vertical_line')  # show
+
     # Threshold
-    image_threshold = get_threshold(image_gradient)
+    image_threshold = get_threshold(image_line_removed)
     contours = get_contours(image_threshold)
     image_with_contours = draw_contour_rect(image_origin, contours, image_threshold)
 
@@ -289,22 +299,22 @@ def process_image(resource_dir, filename_prefix, extension):
     comparing_images.append(compare_set)
     # show_window(merge_horizontal(image_close, image_with_contours), 'image_close')  # show
 
-    # Long line remove
-    image_line_removed = remove_vertical_line(image_close, image_origin)
-    contours = get_contours(image_line_removed)
-    image_with_contours = draw_contour_rect(image_origin, contours, image_line_removed)
-
-    compare_set = merge_vertical(image_line_removed, image_with_contours)
-    comparing_images.append(compare_set)
-    # show_window(merge_horizontal(image_close, image_with_contours), 'remove_vertical_line')  # show
+    # # Long line remove
+    # image_line_removed = remove_vertical_line(image_close, image_origin)
+    # contours = get_contours(image_line_removed)
+    # image_with_contours = draw_contour_rect(image_origin, contours, image_line_removed)
+    #
+    # compare_set = merge_vertical(image_line_removed, image_with_contours)
+    # comparing_images.append(compare_set)
+    # # show_window(merge_horizontal(image_close, image_with_contours), 'remove_vertical_line')  # show
 
     image_merged_all = np.hstack(comparing_images)
     # show_window(image_merged_all, 'image_merged_all')  # show
-    # save_image(image_merged_all, filename_prefix)  # save image as a file
+    save_image(image_merged_all, filename_prefix)  # save image as a file
 
 
 def execute_test_set():
-    for i in range(2, 4):  # min <= i < max
+    for i in range(1, 17):  # min <= i < max
         filename_prefix = "test (" + str(i) + ")"
         print(filename_prefix)
         process_image('images/', filename_prefix, ".jpg")
