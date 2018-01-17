@@ -1,7 +1,29 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""  Detect text in the image.
-And processes the image to extract the text portions using OpenCV-Python and CNN.
+
+""" 이미지에서 글자 부분을 추출하기 위해 이미지 처리(Image precessing)를 합니다.
+
+* 이미지에서 글자로 추정되는 부분을 찾아 표시하거나 해당 영역을 잘라낼 수 있습니다.
+* 글자로 추정되는 부분을 더 잘 찾기 위해 이미지 처리(Image precessing)를 거칩니다.
+* 이미지 처리(Image precessing)는 5단계로 구성됩니다.
+  process_image() 에서 순서를 변경하여 적용할 수 있습니다.
+    1) Gray-scale 적용
+    2) Morph Gradient 적용
+    3) Long Line Removal 적용
+    4) Threshold 적용
+    5) Close 적용
+
+* 위 이미지 처리(Image precessing) 단계를 거친 후 Contour(경계영역)를 추출하면
+  글자로 추정되는 영역을 발견할 수 있습니다.
+
+* 아래 import 목록에 해당하는 파이썬 패키지가 개발환경에 설치되어야 합니다.
+  특히 OCR(문자 인식)을 위한 pytesseract 를 사용하기 위해서는
+  각 언어팩을 함께 설치해야함에 주의하세요.
+  이미지처리에는 주로 OpenCV 라이브러리를 활용합니다.
+
+
+* See: https://github.com/nicewoong/pyTextGotcha
+todo 사용한 오픈소스 라이센스 표시하기
 """
 
 
@@ -18,66 +40,91 @@ configs = None
 
 
 def read_configs(config_file):
-    with open(config_file, 'r') as yml_file:
-        configurations = yaml.load(yml_file)
+    """ .yml file 을 읽어서 configuration 값의 객체를 갖습니다.
 
-    global configs
-    configs = configurations
-    return configurations
+    :param config_file:
+    :return: 읽은 configuration 을 담고있는 dictionary 형태로 반환
+    """
+    # read contents from .yam config file
+    with open(config_file, 'r') as yml_file:
+        configurations = yaml.load(yml_file)  # use 'yaml' package to read .yml file
+
+    global configs  # global var : configs
+    configs = configurations  # set configs
+    return configurations  # return read configurations
 
 
 def print_configs():
-    global configs
+    """ 전역변수 configs 에 저장된 configuration 내용을 출려합니다.
+
+    :return: None
+    """
+    global configs  # refer global variable : configs
     for section in configs:
         print(section + ":")
         print(configs[section])
 
 
 def resize(image, flag=-1):
+    """ Configuration 의 width, height 값을 기준으로 이미지 사이즈를 변경합니다.
+
+    :param image - cv2 이미지 객체
+    :param flag - flag > 0 이면 사이즈를 증가, flag < 0 (default)이면 사이즈를 축소
+    :return: image_copy - 사이즈가 변환된 이미지
     """
-    :param image:
-    :param flag: flag > 0 이면 사이즈를 증가, flag < 0 (default)이면 사이즈를 축소한다.
-    :return:
-    """
+    # get configs
     global configs
     standard_height = configs['resize_origin']['standard_height']
     standard_width = configs['resize_origin']['standard_width']
     # get image size
     height, width = image.shape[:2]
-    # print original size
-    print("width : " + str(width) + ", height : " + str(height))
-    if (flag > 0 and height < standard_height) or (flag < 0 and height > standard_height):
+    image_copy = image.copy()
+    # print original size (width, height)
+    print("origin (width : " + str(width) + ", height : " + str(height) + ")")
+    rate = 1  # default
+    if (flag > 0 and height < standard_height) or (flag < 0 and height > standard_height):  # Resize based on height
         rate = standard_height / height
-        w = round(width * rate)  # should be integer
-        h = round(height * rate)  # should be integer
-        image = cv2.resize(image, (w, h))
-        print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
-    elif (flag > 0 and width < standard_width) or (flag < 0 and height > standard_height):
+    elif (flag > 0 and width < standard_width) or (flag < 0 and height > standard_height):  # Resize based on width
         rate = standard_width / width
-        w = round(width * rate)  # should be integer
-        h = round(height * rate)  # should be integer
-        image = cv2.resize(image, (w, h))
-        print("after resize() (width : " + str(w) + ", height : " + str(h) + ")")
-    return image
+    # resize
+    w = round(width * rate)  # should be integer
+    h = round(height * rate)  # should be integer
+    image_copy = cv2.resize(image_copy, (w, h))
+    # print modified size (width, height)
+    print("after resize : (width : " + str(w) + ", height : " + str(h) + ")")
+    return image_copy
 
 
 def open_original(file_path):
-    """ image file 을 읽어들여서 image 객체를 반환합니다.
+    """ image file 을 읽어들여서 OpenCV image 객체로 반환합니다.
+
+    :param file_path:  경로를 포함한 이미지 파일
+    :return:  OpenCV 의 BGR image 객체 (3 dimension)
     """
-    image_origin = cv2.imread(file_path)
+    image_origin = cv2.imread(file_path)  # read image from file
     return image_origin
 
 
 def get_gray(image_origin):
-    """ image 객체를 받아서 Gray-scale 을 적용한 이미지 객체를 반환합니다.
+    """ image 객체를 인자로 받아서 Gray-scale 을 적용한 2차원 이미지 객체로 반환합니다.
+    이 때 인자로 입력되는 이미지는 BGR 컬러 이미지여야 합니다.
+
+    :param image_origin: OpenCV 의 BGR image 객체 (3 dimension)
+    :return: gray-scale 이 적용된 image 객체 (2 dimension)
     """
-    copy = image_origin.copy()
-    image_copy_grey = cv2.cvtColor(copy, cv2.COLOR_BGR2GRAY)  # grey scale 로 복사합니다.
-    return image_copy_grey
+    copy = image_origin.copy()  # copy the image to be processed
+    image_grey = cv2.cvtColor(copy, cv2.COLOR_BGR2GRAY)  # apply gray-scale to the image
+    return image_grey
 
 
 def get_gradient(image_gray):
-    copy = image_gray.copy()
+    """ 이미지에 Dilation 과 Erosion 을 적용하여 그 차이를 이용해 윤곽선을 추출합니다.
+    이 때 인자로 입력되는 이미지는 Gray scale 이 적용된 2차원 이미지여야 합니다.
+
+    :param image_gray: Gray-scale 이 적용된 OpenCV image
+    :return: 윤곽선을 추출한 결과 이미지 (OpenCV image)
+    """
+    copy = image_gray.copy()  # copy the image to be processed
     # get configs
     global configs
     kernel_size_row = configs['gradient']['kernel_size_row']
@@ -151,7 +198,6 @@ def get_contours(image_threshold):
 
 
 def remove_long_line(image_binary, origin):
-    # todo Consider removing the vertical line mainly. Horizontal lines should only remove large proportions in image
     copy = image_binary.copy()
     copy_rgb = origin.copy()
     # get configs
@@ -201,13 +247,11 @@ def get_crop_images(image_origin, contours):
     global configs
     min_width = configs['contour']['min_width']
     min_height = configs['contour']['min_height']
-    margin = 15
+    margin = 10
     image_copy = image_origin.copy()
     origin_height, origin_width = image_copy.shape[:2]  # get image size
     crop_images = [image_copy]  # 자른 이미지를 하나씩 추가해서 저장할 리스트
-    # todo contour 에서 margin 을 줬을 때 이미지 원본 영역을 벗어나지 않는지 체크해야한다.
-    # todo 이미지 영역을 벗어날 경우 아래와 같은 에러 발생
-    # todo ValueError: tile cannot extend outside image
+
     for contour in contours:
         x, y, width, height = cv2.boundingRect(contour)  # 좌상단 꼭지점 좌표 , width, height
         # Rect 의 size 가 기준 이상인 것만 담는다
@@ -223,7 +267,7 @@ def get_crop_images(image_origin, contours):
     return crop_images
 
 
-def orc_test(image, title, f_stream=None):
+def image_to_text_file(image, title, f_stream=None):
     img = Image.fromarray(image)
     text = ocr.image_to_string(img, lang='kor')
     if f_stream is not None:
@@ -234,11 +278,17 @@ def orc_test(image, title, f_stream=None):
         print(text)
 
 
+def get_text_from_image(image):
+    img = Image.fromarray(image)
+    text = ocr.image_to_string(img, lang='kor')
+    return text
+
+
 def show_window(image, title='untitled'):
     """ 윈도우를 열어서 이미지를 보여줍니다.
     """
     height, width = image.shape[:2]  # get image size
-    if height > 700:
+    if height > 700:  # 화면에 꽉찰만큼 크면
         rate = 700 / height
         height = round(height * rate)
         width = round(width * rate)
@@ -322,26 +372,27 @@ def process_image(resource_dir, filename_prefix, extension):
     compare_set = merge_vertical(image_close, image_with_contours)
     comparing_images.append(compare_set)
 
+    # Merge all step's images
     image_merged_all = np.hstack(comparing_images)
     # show_window(image_merged_all, 'image_merged_all')  # show all step
     # save_image(image_merged_all, filename_prefix)  # save all step image as a file
-
-    # save final result
-    save_image(image_with_contours, filename_prefix + '_final_')
+    # # save final result
+    # save_image(image_with_contours, filename_prefix + '_final_')
     return get_crop_images(image_origin, contours)
 
 
 def execute_test_set():
-    for i in range(1, 17):  # min <= i < max
+    # for i in range(1, 17):  # min <= i < max
+    for i in (4, 8, 10, 13, 14):  # min <= i < max
         filename_prefix = "test (" + str(i) + ")"
         print(filename_prefix)
         crop_images = process_image('images/', filename_prefix, ".jpg")
         count = 0
-        f = open("results/" + filename_prefix + "_log2.txt", 'w')
+        f = open("results/" + filename_prefix + "_log3.txt", 'w')
         for crop_image in crop_images:
             count += 1
-            save_image(crop_image, filename_prefix + "crop_" + str(count))
-            orc_test(crop_image, filename_prefix + "crop_" + str(count), f)
+            # save_image(crop_image, filename_prefix + "crop_" + str(count))
+            image_to_text_file(crop_image, filename_prefix + "crop_" + str(count), f)
         f.close()
 
 
