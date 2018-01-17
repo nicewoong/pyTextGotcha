@@ -16,7 +16,7 @@
 * 위 이미지 처리(Image precessing) 단계를 거친 후 Contour(경계영역)를 추출하면
   글자로 추정되는 영역을 발견할 수 있습니다.
 
-* 각 단계의 함수 내부에서 사용되는 변수들은 configs.yml 파일에서 설정가능합니다.
+* 각 단계의 함수 내부에서 사용되는 상수 값들은 configs.yml 파일에서 설정가능합니다.
 
 * 아래 import 목록에 해당하는 파이썬 패키지가 개발환경에 설치되어야 합니다.
   특히 OCR(문자 인식)을 위한 pytesseract 를 사용하기 위해서는
@@ -57,7 +57,7 @@ def read_configs(config_file):
 
 
 def print_configs():
-    """ 전역변수 configs 에 저장된 configuration 내용을 출려합니다.
+    """ 전역변수 configs 에 저장된 configuration 내용을 출력합니다.
 
     :return: None
     """
@@ -188,11 +188,11 @@ def get_threshold(image_gray):
 
     if mode == 'mean':  # adaptive threshold - mean
         image_threshold = cv2.adaptiveThreshold(copy, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
-                                                        cv2.THRESH_BINARY_INV, block_size, subtract_val)
+                                                cv2.THRESH_BINARY_INV, block_size, subtract_val)
     elif mode == 'gaussian':  # adaptive threshold - gaussian
         image_threshold = cv2.adaptiveThreshold(copy, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                        cv2.THRESH_BINARY_INV, block_size, subtract_val)
-    elif mode == 'global':  # global threshold - otsu's binary operation
+                                                cv2.THRESH_BINARY_INV, block_size, subtract_val)
+    else:  # (mode == 'global') global threshold - otsu's binary operation
         image_threshold = get_otsu_threshold(copy)
 
     return image_threshold  # Returns the image with the threshold applied.
@@ -277,7 +277,7 @@ def draw_contour_rect(image_origin, contours):
     """ 사각형의 Contour 를 이미지 위에 그려서 반환합니다.
     찾은 Contours 를 기반으로 이미지 위에 각 contour 를 감싸는 외각 사각형을 그립니다.
 
-    :param image_origin: OpenCV의 image 객체 (2 dimension)
+    :param image_origin: OpenCV의 image 객체
     :param contours: 이미지 위에 그릴 contour 리스트
     :return: 사각형의 Contour 를 그린 이미지
     """
@@ -297,11 +297,12 @@ def draw_contour_rect(image_origin, contours):
 
 
 def get_cropped_images(image_origin, contours):
-    """
+    """ 이미지에서 찾은 Contour 부분들을 잘라내어 반환합니다.
+    각 contour 를 감싸는 외각 사각형에 여유분(margin)을 주어 이미지를 잘라냅니다.
 
-    :param image_origin:
-    :param contours:
-    :return:
+    :param image_origin: 원본 이미지
+    :param contours: 잘라낼 contour 리스트
+    :return: contours 를 기반으로 잘라낸 이미지(OpenCV image 객체) 리스트
     """
     image_copy = image_origin.copy()  # copy the image to be processed
     # get configs
@@ -324,53 +325,86 @@ def get_cropped_images(image_origin, contours):
             col_to = (x + width + margin) if (x + width + margin) < origin_width else x + width
             # Crop the image with Numpy Array
             cropped = image_copy[row_from: row_to, col_from: col_to]
-            cropped_images.append(cropped)
+            cropped_images.append(cropped)  # add to the list
     return cropped_images
 
 
-def show_window(image, title='untitled'):
-    """ 윈도우를 열어서 이미지를 보여줍니다.
+def show_window(image, title='untitled', max_height=700):
+    """ 이미지 윈도우를 열어서 보여줍니다.
+
+    :param image: 보여줄 이미지 (OpenCV image 객체)
+    :param title: 윈도우 제목
+    :param max_height: 이미지 윈도우 사이즈의 최대 높이
+    :return:
     """
     height, width = image.shape[:2]  # get image size
-    if height > 700:  # 화면에 꽉찰만큼 크면
-        rate = 700 / height
+    if height > max_height:  # adjust window size if too large
+        rate = max_height / height
         height = round(height * rate)
-        width = round(width * rate)
+        width = round(width * rate)  # apply the same rate to width
 
     cv2.namedWindow(title, cv2.WINDOW_NORMAL)  # Create a window that the user can resize
     cv2.resizeWindow(title, width, height)  # resize window according to the size of the image
     cv2.imshow(title, image)  # open image window
-    cv2.waitKey(0)  # Continue to wait until keyboard input
+    cv2.waitKey(0)  # wait until keyboard input
     cv2.destroyAllWindows()
 
 
 def save_image(image, name_prefix):
-    """ 이미지를 file 로 저장합니다.
+    """ 이미지(OpenCV image 객체)를 이미지파일(.jpg)로 저장합니다.
+
+    :param image: 저장할 이미지 (OpenCV image 객체)
+    :param name_prefix: 파일명을 식별할 접두어 (확장자 제외)
+    :return:
     """
-    d_date = datetime.datetime.now()
-    current_datetime = d_date.strftime("%Y%m%d%I%M%S")
-    file_path = "results/" + name_prefix + "_" + current_datetime + ".jpg"
+    # make file name with the datetime suffix.
+    d_date = datetime.datetime.now()  # get current datetime
+    current_datetime = d_date.strftime("%Y%m%d%I%M%S")  # datetime to string
+    file_path = name_prefix + "_" + current_datetime + ".jpg"  # complete file name
     cv2.imwrite(file_path, image)
 
 
-def merge_horizontal(image_gray, image_contours):
-    # Make the grey scale image have three channels
+def merge_horizontal(image_gray, image_bgr):
+    """ Height 사이즈가 같은 두 이미지를 옆으로(Horizontally) 병합 합니다.
+    이미지 처리(Image processing) 단계를 원본과 비교하기위한 목적으로,
+    2차원(2 dimension) 흑백 이미지와 3차원(3 dimension) BGR 컬리 이미지를 인자로 받아 병합합니다.
+
+    :param image_gray: 2차원(2 dimension) 흑백 이미지
+    :param image_bgr: 3차원(3 dimension) BGR 컬리 이미지
+    :return: 옆으로(Horizontally) 병합된 이미지
+    """
+    # Make the grey scale image have 3 channels
     image_cr = cv2.cvtColor(image_gray, cv2.COLOR_GRAY2BGR)
     # Merge image horizontally
-    numpy_horizontal = np.hstack((image_cr, image_contours))
+    numpy_horizontal = np.hstack((image_cr, image_bgr))
     # numpy_horizontal_concat = np.concatenate((image, image_contours), axis=1)
     return numpy_horizontal
 
 
-def merge_vertical(image_gray, image_contours):
-    # Make the grey scale image have three channels
+def merge_vertical(image_gray, image_bgr):
+    """ Width 사이즈가 같은 두 이미지를 위아래로(Vertically) 병합 합니다.
+    이미지 처리(Image processing) 단계를 원본과 비교하기위한 목적으로,
+    2차원(2 dimension) 흑백 이미지와 3차원(3 dimension) BGR 컬리 이미지를 인자로 받아 병합합니다.
+
+    :param image_gray: 2차원(2 dimension) 흑백 이미지
+    :param image_bgr: 3차원(3 dimension) BGR 컬리 이미지
+    :return: 위아래로(Vertically) 병합된 이미지
+    """
+    # Make the grey scale image have 3 channels
     image_cr = cv2.cvtColor(image_gray, cv2.COLOR_GRAY2BGR)
     # Merge image horizontally
-    numpy_vertical = np.vstack((image_cr, image_contours))
+    numpy_vertical = np.vstack((image_cr, image_bgr))
     return numpy_vertical
 
 
 def image_to_text_file(image, title, f_stream=None):
+    """ OCR 엔진(pytesseract) 를 이용해 이미지에서 글자를 추출하여 파일에 씁니다.
+
+    :param image: 텍스트(Text)를 추출할 resource 이미지
+    :param title: 현재 추출한 글자를 구분할 제목 (String)
+    :param f_stream: 추출한 텍스트(Text)를 쓸 파일스트림
+    :return:
+    """
     img = Image.fromarray(image)
     text = ocr.image_to_string(img, lang='kor')
     if f_stream is not None:
@@ -382,6 +416,11 @@ def image_to_text_file(image, title, f_stream=None):
 
 
 def get_text_from_image(image):
+    """ OCR 엔진(tesseract) 를 이용해 이미지에서 글자를 추출합니다.
+
+    :param image: 텍스트(Text)를 추출할 resource 이미지
+    :return: 추출한 텍스트(Text)를 String 형으로 반환
+    """
     img = Image.fromarray(image)
     text = ocr.image_to_string(img, lang='kor')
     return text
