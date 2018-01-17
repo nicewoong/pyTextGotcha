@@ -450,13 +450,19 @@ def process_image(image_file):
     image_threshold = get_threshold(image_line_removed)
     # Morph Close
     image_close = get_closing(image_threshold)
-    # return processed image
-    return image_close
+    contours = get_contours(image_close)
+
+    return get_cropped_images(image_origin, contours)
 
 
 def main():
     read_configs('config.yml')
     print_configs()
+    cropped_images = process_image('images/test (1).jpg')
+    count = 0
+    for crop_image in cropped_images:
+        count += 1
+        save_image(crop_image, "crop_" + str(count))
 
 
 if __name__ == "__main__":

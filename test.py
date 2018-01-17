@@ -71,3 +71,10 @@ def execute_test_set():
             # save_image(crop_image, filename_prefix + "crop_" + str(count))
             image_to_text_file(crop_image, filename_prefix + "crop_" + str(count), f)
         f.close()
+
+
+def main():
+
+
+if __name__ == "__main__":
+    main()
