@@ -16,6 +16,8 @@
 * 위 이미지 처리(Image precessing) 단계를 거친 후 Contour(경계영역)를 추출하면
   글자로 추정되는 영역을 발견할 수 있습니다.
 
+* 각 단계의 함수 내부에서 사용되는 변수들은 configs.yml 파일에서 설정가능합니다.
+
 * 아래 import 목록에 해당하는 파이썬 패키지가 개발환경에 설치되어야 합니다.
   특히 OCR(문자 인식)을 위한 pytesseract 를 사용하기 위해서는
   각 언어팩을 함께 설치해야함에 주의하세요.
@@ -121,7 +123,7 @@ def get_gradient(image_gray):
     """ 이미지에 Dilation 과 Erosion 을 적용하여 그 차이를 이용해 윤곽선을 추출합니다.
     이 때 인자로 입력되는 이미지는 Gray scale 이 적용된 2차원 이미지여야 합니다.
 
-    :param image_gray: Gray-scale 이 적용된 OpenCV image
+    :param image_gray: Gray-scale 이 적용된 OpenCV image (2 dimension)
     :return: 윤곽선을 추출한 결과 이미지 (OpenCV image)
     """
     copy = image_gray.copy()  # copy the image to be processed
@@ -136,152 +138,194 @@ def get_gradient(image_gray):
     return image_gradient
 
 
-def get_threshold(image_gray):
-    """ Gray-scale 이 적용된 이미지를 입력받아서 Adaptive Threshold 를 적용한 흑백(Binary) 이미지객체를 반환합니다.
+def remove_long_line(image_binary):
+    """ 이미지에서 직선을 찾아서 삭제합니다.
+    글자 경계를 찾을 때 방해가 되는 직선을 찾아서 삭제합니다.
+    이 때 인자로 입력되는 이미지 2 차원(2 dimension) 흑백(Binary) 이미지여야 합니다.
+    직선을 삭제할 때는 해당 라인을 검정색으로 그려 덮어 씌웁니다. 
+
+    :param image_binary: 흑백(Binary) OpenCV image (2 dimension)
+    :return: 라인이 삭제된 이미지 (OpenCV image)
     """
-    # get configs
-    global configs
-    mode = configs['threshold']['mode']
-    block_size = configs['threshold']['block_size']
-    subtract_val = configs['threshold']['subtract_val']
-
-    if mode == 'mean':
-        # adaptive threshold - mean
-        image_threshold = cv2.adaptiveThreshold(image_gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
-                                                        cv2.THRESH_BINARY_INV, block_size, subtract_val)
-    elif mode == 'gaussian':
-        image_threshold = cv2.adaptiveThreshold(image_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                        cv2.THRESH_BINARY_INV, block_size, subtract_val)
-    elif mode == 'global':
-        image_threshold = get_otsu_threshold(image_gray)
-
-    return image_threshold
-
-
-def get_global_threshold(image_gray):
-    ret, binary_image = cv2.threshold(image_gray, 180, 255, cv2.THRESH_BINARY)
-    return binary_image
-
-
-def get_otsu_threshold(image_gray):
-    blur = cv2.GaussianBlur(image_gray, (5, 5), 0)  # Gaussian blur 를 통해 noise 를 제거한 후
-    # global threshold with otsu's binarization
-    ret3, image_otsu = cv2.threshold(image_gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    return image_otsu
-
-
-def get_closing(image_gray):
-    """ Gray scale 이 적용된 이미지에 Morph Close 를 적용합니다.
-    Closing : dilation 수행을 한 후 바로 erosion 수행을 하여 본래 이미지 크기로
-    커널은 Image Transformation 을 결정하는 구조화된 요소
-    커널의 크기가 크거나, 반복횟수가 많아지면 과하게 적용되어 경계가 없어질 수도 있다
-    """
-    # get configs
-    global configs
-    kernel_size_row = configs['close']['kernel_size_row']
-    kernel_size_col = configs['close']['kernel_size_col']
-    # make kernel matrix for dilation and erosion
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size_row, kernel_size_col))
-    # close
-    image_close = cv2.morphologyEx(image_gray, cv2.MORPH_CLOSE, kernel)
-    return image_close
-
-
-def get_contours(image_threshold):
-    """ Threshold 가 적용된 이미지에 대하여 contour 리스트를 추출하여 dictionary 형태로 반환합니다.
-    """
-    global configs
-    retrieve_mode = configs['contour']['retrieve_mode']  # integer
-    approx_method = configs['contour']['approx_method']  # integer
-    _, contours, _ = cv2.findContours(image_threshold, retrieve_mode, approx_method)
-    return contours
-
-
-def remove_long_line(image_binary, origin):
-    copy = image_binary.copy()
-    copy_rgb = origin.copy()
+    copy = image_binary.copy()  # copy the image to be processed
     # get configs
     global configs
     threshold = configs['remove_line']['threshold']
     min_line_length = configs['remove_line']['min_line_length']
     max_line_gap = configs['remove_line']['max_line_gap']
 
+    # # Adjust the min_line_length according to the size of image
     # height, width = copy.shape[:2]  # get image size
     # min_line_length = height * 0.9
     # print(min_line_length)
 
-    # find lines
+    # find and remove lines
     lines = cv2.HoughLinesP(copy, 1, np.pi / 180, threshold, min_line_length, max_line_gap)
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]  # get end point of line : ( (x1, y1) , (x2, y2) )
-            if x1 == x2 or y1 == y2:
+            if x1 == x2 or y1 == y2:  # only vertical or parallel lines.
                 # remove line drawing black line
                 cv2.line(copy, (x1, y1), (x2, y2), (0, 0, 0), 10)
-
-    # show_window(copy)
     return copy
 
 
-def draw_contour_rect(image_origin, contours, image_threshold):
-    """ 이미지위에 찾은 Contours 를 기반으로 외각사각형을 그리고 해당 이미지를 반환합니다.
+def get_threshold(image_gray):
+    """ 이미지에 Threshold 를 적용해서 흑백(Binary) 이미지객체를 반환합니다.
+    이 때 인자로 입력되는 이미지는 Gray-scale 이 적용된 2차원 이미지여야 합니다.
+    configs 에 적용된 threshold mode 에 따라 global threshold / mean adaptive threshold / gaussian adaptive threshold
+    를 적용할 수 있습니다.
+
+    :param image_gray: Gray-scale 이 적용된 OpenCV image (2 dimension)
+    :return: Threshold 를 적용한 흑백(Binary) 이미지
+    """
+    copy = image_gray.copy()  # copy the image to be processed
+    # get configs
+    global configs
+    mode = configs['threshold']['mode']  # get threshold mode (mean or gaussian or global)
+    block_size = configs['threshold']['block_size']
+    subtract_val = configs['threshold']['subtract_val']
+
+    if mode == 'mean':  # adaptive threshold - mean
+        image_threshold = cv2.adaptiveThreshold(copy, 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                                        cv2.THRESH_BINARY_INV, block_size, subtract_val)
+    elif mode == 'gaussian':  # adaptive threshold - gaussian
+        image_threshold = cv2.adaptiveThreshold(copy, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                                        cv2.THRESH_BINARY_INV, block_size, subtract_val)
+    elif mode == 'global':  # global threshold - otsu's binary operation
+        image_threshold = get_otsu_threshold(copy)
+
+    return image_threshold  # Returns the image with the threshold applied.
+
+
+def get_global_threshold(image_gray, threshold_value=130):
+    """ 이미지에 Global Threshold 를 적용해서 흑백(Binary) 이미지객체를 반환합니다.
+    하나의 값(threshold_value)을 기준으로 이미지 전체에 적용하여 Threshold 를 적용합니다.
+    픽셀의 밝기 값이 기준 값 이상이면 흰색, 기준 값 이하이면 검정색을 적용합니다.
+    이 때 인자로 입력되는 이미지는 Gray-scale 이 적용된 2차원 이미지여야 합니다.
+    
+    :param image_gray:
+    :param threshold_value: 이미지 전체에 Threshold 를 적용할 기준 값.
+    :return: Global Threshold 를 적용한 흑백(Binary) 이미지
+    """
+    copy = image_gray.copy()  # copy the image to be processed
+    _, binary_image = cv2.threshold(copy, threshold_value, 255, cv2.THRESH_BINARY)
+    return binary_image
+
+
+def get_otsu_threshold(image_gray):
+    """  이미지에 Global Threshold 를 적용해서 흑백(Binary) 이미지객체를 반환합니다.
+    하나의 값을 기준으로 이미지 전체에 적용하여 Threshold 를 적용합니다.
+    해당 값은 Otsu's Binarization 에 의해 자동으로 이미지의 히스토그램을 분석한 후 중간값으로 설정됩니다.
+    픽셀의 밝기 값이 기준 값 이상이면 흰색, 기준 값 이하이면 검정색을 적용합니다.
+    이 때 인자로 입력되는 이미지는 Gray-scale 이 적용된 2차원 이미지여야 합니다.
+
+    :param image_gray: Gray-scale 이 적용된 OpenCV image (2 dimension)
+    :return: Otsu's Binarization에 의해 Global Threshold 를 적용한 흑백(Binary) 이미지
+    """
+    copy = image_gray.copy()  # copy the image to be processed
+    blur = cv2.GaussianBlur(copy, (5, 5), 0)  # Gaussian blur 를 통해 noise 를 제거한 후
+    # global threshold with otsu's binarization
+    ret3, image_otsu = cv2.threshold(copy, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return image_otsu
+
+
+def get_closing(image_gray):
+    """ 이미지에 Morph Close 를 적용한 이미지객체를 반환합니다.
+    이미지에 Dilation 수행을 한 후 Erosion 을 수행한 것입니다.
+    이 때 인자로 입력되는 이미지는 Gray-scale 이 적용된 2차원 이미지여야 합니다.
+    configs 에 의해 kernel size 값을 설정할 수 있습니다.
+
+    todo +++++++++ 아래 설명은 README 로 옮기자
+    커널은 Image Transformation 을 결정하는 구조화된 요소이며
+    커널의 크기가 크거나, 반복횟수가 많아지면 과하게 적용되어 경계가 없어질 수도 있습니다.
+
+    :param image_gray: Gray-scale 이 적용된 OpenCV image (2 dimension)
+    :return: Morph Close 를 적용한 흑백(Binary) 이미지
+    """
+    copy = image_gray.copy()  # copy the image to be processed
+    # get configs
+    global configs
+    kernel_size_row = configs['close']['kernel_size_row']
+    kernel_size_col = configs['close']['kernel_size_col']
+    # make kernel matrix for dilation and erosion
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kernel_size_row, kernel_size_col))
+    # closing (dilation and erosion)
+    image_close = cv2.morphologyEx(copy, cv2.MORPH_CLOSE, kernel)
+    return image_close
+
+
+def get_contours(image):
+    """ 이미지에서 Contour 를 추출하여 반환합니다.
+    Contour 추출 모드는 configs 에서 설정할 수 있습니다.
+    찾은 contour 리스트를 dictionary 형태로 반환합니다.
+    이미지 처리(Image processing) 단계를 거친 후 contour 를 잘 추출할 수 있습니다.
+
+    :param image: OpenCV의 image 객체 (2 dimension)
+    :return: 이미지에서 추출한 contours
     """
     # get configs
     global configs
-    min_width = configs['contour']['min_width']
-    min_height = configs['contour']['min_height']
-    rgb_copy = image_origin.copy()
-    # Draw bounding rectangles
-    for contour in contours:
-        x, y, width, height = cv2.boundingRect(contour)  # 좌상단 꼭지점 좌표 , width, height
-        # Rect 의 size 가 기준 이상인 것만 이미지 위에 그리기
-        if width > min_width and height > min_height:
-            cv2.rectangle(rgb_copy, (x, y), (x + width, y + height), (0, 255, 0), 2)  # 원본 이미지 위에 사각형 그리기!
-
-    # cv2.drawContours(image, contours, -1, (0, 255, 0), 3)
-    return rgb_copy
+    retrieve_mode = configs['contour']['retrieve_mode']  # integer value
+    approx_method = configs['contour']['approx_method']  # integer value
+    # find contours from the image
+    _, contours, _ = cv2.findContours(image, retrieve_mode, approx_method)
+    return contours
 
 
-def get_crop_images(image_origin, contours):
+def draw_contour_rect(image_origin, contours):
+    """ 사각형의 Contour 를 이미지 위에 그려서 반환합니다.
+    찾은 Contours 를 기반으로 이미지 위에 각 contour 를 감싸는 외각 사각형을 그립니다.
+
+    :param image_origin: OpenCV의 image 객체 (2 dimension)
+    :param contours: 이미지 위에 그릴 contour 리스트
+    :return: 사각형의 Contour 를 그린 이미지
+    """
+    rgb_copy = image_origin.copy()  # copy the image to be processed
     # get configs
     global configs
     min_width = configs['contour']['min_width']
     min_height = configs['contour']['min_height']
-    margin = 10
-    image_copy = image_origin.copy()
-    origin_height, origin_width = image_copy.shape[:2]  # get image size
-    crop_images = [image_copy]  # 자른 이미지를 하나씩 추가해서 저장할 리스트
-
+    # Draw bounding rectangles
     for contour in contours:
-        x, y, width, height = cv2.boundingRect(contour)  # 좌상단 꼭지점 좌표 , width, height
-        # Rect 의 size 가 기준 이상인 것만 담는다
+        x, y, width, height = cv2.boundingRect(contour)  # top-left vertex coordinates (x,y) , width, height
+        # Draw images that are larger than the standard size
         if width > min_width and height > min_height:
-            crop_row_1 = (y - margin) if (y - margin) > 0 else y
-            crop_row_2 = (y + height + margin) if (y + height + margin) < origin_height else y + height
-            crop_col_1 = (x - margin) if (x - margin) > 0 else x
-            crop_col_2 = (x + width + margin) if (x + width + margin) < origin_width else x + width
-            # 행렬은 row col 순서!!! 햇갈리지 말자!
-            crop = image_copy[crop_row_1: crop_row_2, crop_col_1: crop_col_2]  # trim한 결과를 img_trim에 담는
-            # crop = image_copy[y: y+height, x: x+width]  # trim한 결과를 img_trim에 담는
-            crop_images.append(crop)
-    return crop_images
+            cv2.rectangle(rgb_copy, (x, y), (x + width, y + height), (0, 255, 0), 2)
+
+    return rgb_copy
 
 
-def image_to_text_file(image, title, f_stream=None):
-    img = Image.fromarray(image)
-    text = ocr.image_to_string(img, lang='kor')
-    if f_stream is not None:
-        f_stream.write("================ " + title + " ================ \n")
-        f_stream.write(text + "\n")
-    else:
-        print("================ OCR result : " + title + "================")
-        print(text)
+def get_cropped_images(image_origin, contours):
+    """
 
+    :param image_origin:
+    :param contours:
+    :return:
+    """
+    image_copy = image_origin.copy()  # copy the image to be processed
+    # get configs
+    global configs
+    min_width = configs['contour']['min_width']
+    min_height = configs['contour']['min_height']
+    margin = 10  # to give the margin when cropping the images
+    origin_height, origin_width = image_copy.shape[:2]  # get image size
+    cropped_images = [image_copy]  # list to save the crop image.
 
-def get_text_from_image(image):
-    img = Image.fromarray(image)
-    text = ocr.image_to_string(img, lang='kor')
-    return text
+    for contour in contours:  # Crop the images with on bounding rectangles of contours
+        x, y, width, height = cv2.boundingRect(contour)  # top-left vertex coordinates (x,y) , width, height
+        # images that are larger than the standard size
+        if width > min_width and height > min_height:
+            # The range of row to crop (with margin)
+            row_from = (y - margin) if (y - margin) > 0 else y
+            row_to = (y + height + margin) if (y + height + margin) < origin_height else y + height
+            # The range of column to crop (with margin)
+            col_from = (x - margin) if (x - margin) > 0 else x
+            col_to = (x + width + margin) if (x + width + margin) < origin_width else x + width
+            # Crop the image with Numpy Array
+            cropped = image_copy[row_from: row_to, col_from: col_to]
+            cropped_images.append(cropped)
+    return cropped_images
 
 
 def show_window(image, title='untitled'):
@@ -326,6 +370,23 @@ def merge_vertical(image_gray, image_contours):
     return numpy_vertical
 
 
+def image_to_text_file(image, title, f_stream=None):
+    img = Image.fromarray(image)
+    text = ocr.image_to_string(img, lang='kor')
+    if f_stream is not None:
+        f_stream.write("================ " + title + " ================ \n")
+        f_stream.write(text + "\n")
+    else:
+        print("================ OCR result : " + title + "================")
+        print(text)
+
+
+def get_text_from_image(image):
+    img = Image.fromarray(image)
+    text = ocr.image_to_string(img, lang='kor')
+    return text
+
+
 def process_image(resource_dir, filename_prefix, extension):
     resource = resource_dir + filename_prefix + extension
     image_origin = open_original(resource)
@@ -335,7 +396,7 @@ def process_image(resource_dir, filename_prefix, extension):
     # Grey-Scale
     image_gray = get_gray(image_origin)
     contours = get_contours(image_gray)
-    image_with_contours = draw_contour_rect(image_origin, contours, image_gray)
+    image_with_contours = draw_contour_rect(image_origin, contours)
 
     compare_set = merge_vertical(image_gray, image_with_contours)
     comparing_images.append(compare_set)
@@ -343,15 +404,15 @@ def process_image(resource_dir, filename_prefix, extension):
     # Morph Gradient
     image_gradient = get_gradient(image_gray)
     contours = get_contours(image_gradient)
-    image_with_contours = draw_contour_rect(image_origin, contours, image_gradient)
+    image_with_contours = draw_contour_rect(image_origin, contours)
 
     compare_set = merge_vertical(image_gradient, image_with_contours)
     comparing_images.append(compare_set)
 
     # Long line remove
-    image_line_removed = remove_long_line(image_gradient, image_origin)
+    image_line_removed = remove_long_line(image_gradient)
     contours = get_contours(image_line_removed)
-    image_with_contours = draw_contour_rect(image_origin, contours, image_line_removed)
+    image_with_contours = draw_contour_rect(image_origin, contours)
 
     compare_set = merge_vertical(image_line_removed, image_with_contours)
     comparing_images.append(compare_set)
@@ -359,7 +420,7 @@ def process_image(resource_dir, filename_prefix, extension):
     # Threshold
     image_threshold = get_threshold(image_line_removed)
     contours = get_contours(image_threshold)
-    image_with_contours = draw_contour_rect(image_origin, contours, image_threshold)
+    image_with_contours = draw_contour_rect(image_origin, contours)
 
     compare_set = merge_vertical(image_threshold, image_with_contours)
     comparing_images.append(compare_set)
@@ -367,7 +428,7 @@ def process_image(resource_dir, filename_prefix, extension):
     # Morph Close
     image_close = get_closing(image_threshold)
     contours = get_contours(image_close)
-    image_with_contours = draw_contour_rect(image_origin, contours, image_close)
+    image_with_contours = draw_contour_rect(image_origin, contours)
 
     compare_set = merge_vertical(image_close, image_with_contours)
     comparing_images.append(compare_set)
@@ -378,9 +439,10 @@ def process_image(resource_dir, filename_prefix, extension):
     # save_image(image_merged_all, filename_prefix)  # save all step image as a file
     # # save final result
     # save_image(image_with_contours, filename_prefix + '_final_')
-    return get_crop_images(image_origin, contours)
+    return get_cropped_images(image_origin, contours)
 
 
+# +++++++++++++++++++++++++++++++++++++ test functions +++++++++++++++++++++++++++++++++++++++++++++
 def execute_test_set():
     # for i in range(1, 17):  # min <= i < max
     for i in (4, 8, 10, 13, 14):  # min <= i < max
