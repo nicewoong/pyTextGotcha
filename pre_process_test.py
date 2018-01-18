@@ -1,6 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+""" pre_precess.py 에서 정의된 이미지 처리(Image precessing)의
+각 단계 및 최종 결과물에 대하여 테스트하고 분석할 수 있습니다.
 
+    * 윈도우를 띄어서 진행단계의 이미지를 확인할 수 있습니다.
+    * 이미지들을 양옆 및 위아래로 병합해여 비교할 수 있습니다.
+"""
 
 __author__ = "Woongje Han (niewoong)"
 import pre_process as pp
