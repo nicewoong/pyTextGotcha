@@ -7,6 +7,7 @@ import pre_process as pp
 import cv2
 import numpy as np
 
+
 def show_window(image, title='untitled', max_height=700):
     """ 이미지 윈도우를 열어서 보여줍니다.
 
@@ -133,6 +134,7 @@ def execute_test_set():
 
 def main():
     execute_test_set()
+
 
 if __name__ == "__main__":
     main()
