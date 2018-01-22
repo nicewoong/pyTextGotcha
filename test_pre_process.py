@@ -11,7 +11,7 @@ __author__ = "Woongje Han (niewoong)"
 import pre_process as pp
 import cv2
 import numpy as np
-
+import os
 
 def show_window(image, title='untitled', max_height=700):
     """ 이미지 윈도우를 열어서 보여줍니다.
@@ -137,8 +137,35 @@ def execute_test_set():
         f.close()
 
 
+def read_all_images(path):
+    """ path 가 가리키는 directory 의 모든 파일명을 읽어서 string 으로 반환합니다.
+    파일명은 Absolute path 가 포함된 이름입니다.
+
+    :param path: 읽어 들일 directory 의 절대경로
+    :return: directory 의 모든 file name 을 String 형으로 Array 에 담아 반환
+    """
+    image_list = []
+
+    for root, dirs, files in os.walk(path):
+        rootpath = os.path.join(os.path.abspath(path), root)
+
+        for file in files:
+            filepath = os.path.join(rootpath, file)
+            image_list.append(filepath)
+
+    return image_list
+
+
+def make_training_images():
+    # read all paths of images
+    paths_of_images = read_all_images('C:/Users/viva/PycharmProjects/image_to_train/')
+
+
+
+
+
 def main():
-    execute_test_set()
+    make_training_images()
 
 
 if __name__ == "__main__":
