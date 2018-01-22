@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 import os
 
+
 def show_window(image, title='untitled', max_height=700):
     """ 이미지 윈도우를 열어서 보여줍니다.
 
@@ -30,8 +31,9 @@ def show_window(image, title='untitled', max_height=700):
     cv2.namedWindow(title, cv2.WINDOW_NORMAL)  # Create a window that the user can resize
     cv2.resizeWindow(title, width, height)  # resize window according to the size of the image
     cv2.imshow(title, image)  # open image window
-    cv2.waitKey(0)  # wait until keyboard input
+    key = cv2.waitKey(0)  # wait until keyboard input
     cv2.destroyAllWindows()
+    return key
 
 
 def merge_horizontal(image_gray, image_bgr):
@@ -67,43 +69,50 @@ def merge_vertical(image_gray, image_bgr):
     return numpy_vertical
 
 
-def get_progress_image(resource_dir, filename_prefix):
-    resource = resource_dir + filename_prefix + ".jpg"  # complete resource image path
-    image_origin = pp.open_original(resource)
+def get_title(path_of_image):
+    str_list = path_of_image.split('/')
+    index = len(str_list) - 1
+    str_list2 = str_list[index].split('.')
+    return str_list2[0]
+
+
+def get_progress_image(path_of_image):
+    # resource = resource_dir + filename_prefix + ".jpg"  # complete resource image path
+    image_origin = pp.open_original(path_of_image)
     image_origin = cv2.pyrUp(image_origin)  # size up ( x4 )
     comparing_images = []
-
+    # show_window(image_origin, 'origin')
     # Grey-Scale
     image_gray = pp.get_gray(image_origin)
-    contours = pp.get_contours(image_gray)
-    image_with_contours = pp.draw_contour_rect(image_origin, contours)
-
-    compare_set = merge_vertical(image_gray, image_with_contours)
-    comparing_images.append(compare_set)
+    # contours = pp.get_contours(image_gray)
+    # image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    #
+    # compare_set = merge_vertical(image_gray, image_with_contours)
+    # comparing_images.append(compare_set)
 
     # Morph Gradient
     image_gradient = pp.get_gradient(image_gray)
-    contours = pp.get_contours(image_gradient)
-    image_with_contours = pp.draw_contour_rect(image_origin, contours)
-
-    compare_set = merge_vertical(image_gradient, image_with_contours)
-    comparing_images.append(compare_set)
+    # contours = pp.get_contours(image_gradient)
+    # image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    #
+    # compare_set = merge_vertical(image_gradient, image_with_contours)
+    # comparing_images.append(compare_set)
 
     # Long line remove
     image_line_removed = pp.remove_long_line(image_gradient)
-    contours = pp.get_contours(image_line_removed)
-    image_with_contours = pp.draw_contour_rect(image_origin, contours)
-
-    compare_set = merge_vertical(image_line_removed, image_with_contours)
-    comparing_images.append(compare_set)
+    # contours = pp.get_contours(image_line_removed)
+    # image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    #
+    # compare_set = merge_vertical(image_line_removed, image_with_contours)
+    # comparing_images.append(compare_set)
 
     # Threshold
     image_threshold = pp.get_threshold(image_line_removed)
-    contours = pp.get_contours(image_threshold)
-    image_with_contours = pp.draw_contour_rect(image_origin, contours)
-
-    compare_set = merge_vertical(image_threshold, image_with_contours)
-    comparing_images.append(compare_set)
+    # contours = pp.get_contours(image_threshold)
+    # image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    #
+    # compare_set = merge_vertical(image_threshold, image_with_contours)
+    # comparing_images.append(compare_set)
 
     # Morph Close
     image_close = pp.get_closing(image_threshold)
@@ -114,11 +123,13 @@ def get_progress_image(resource_dir, filename_prefix):
     comparing_images.append(compare_set)
 
     # Merge all step's images
-    image_merged_all = np.hstack(comparing_images)
+    # image_merged_all = np.hstack(comparing_images)
     # show_window(image_merged_all, 'image_merged_all')  # show all step
     # save_image(image_merged_all, filename_prefix)  # save all step image as a file
-    # # save final result
-    # save_image(image_with_contours, filename_prefix + '_final_')
+
+    result_file_name = get_title(path_of_image)
+    # save final result
+    pp.save_image(image_with_contours, 'C:/Users/viva/PycharmProjects/images_with_contour/result_' + result_file_name)
     return pp.get_cropped_images(image_origin, contours)
 
 
@@ -159,12 +170,38 @@ def read_all_images(path):
 def make_training_images():
     # read all paths of images
     paths_of_images = read_all_images('C:/Users/viva/PycharmProjects/image_to_train/')
+    test_count = 0
+    for image in paths_of_images:
+        test_count += 1
+        # if test_count == 10:
+        #     break
+        cropped_images = get_progress_image(image)
+        title = get_title(image)
+        count = 0
+        for cropped in cropped_images:
+            count += 1
+            # 이 잘라진 이미지가 글자인지 아닌지 show 해서 내가 직접 확인하고 y n 를 눌러서 저장하자.
+            key = show_window(cropped, 'judge ! ')
+            crop_and_gray = pp.get_gray(cropped)
+            crop_and_gradient = pp.get_gradient(crop_and_gray)
+            print(key)
+            if key == 121 or key == 89:  # yes
+                print('Yes')
+                pp.save_image(crop_and_gradient,
+                              'C:/Users/viva/PycharmProjects/images_cropped/text/' + title + '_cropped_' + str(
+                                  count))
 
+            else:  # no
+                print("No")
+                pp.save_image(crop_and_gradient,
+                              'C:/Users/viva/PycharmProjects/images_cropped/not_text/' + title + '_cropped_' + str(
+                                  count))
 
-
+    print('how many images?: ' + str(test_count))
 
 
 def main():
+    pp.read_configs('config.yml')
     make_training_images()
 
 
