@@ -312,7 +312,7 @@ def get_cropped_images(image_origin, contours):
     min_height = configs['contour']['min_height']
     margin = 10  # to give the margin when cropping the images
     origin_height, origin_width = image_copy.shape[:2]  # get image size
-    cropped_images = [image_copy]  # list to save the crop image.
+    cropped_images = []  # list to save the crop image.
 
     for contour in contours:  # Crop the images with on bounding rectangles of contours
         x, y, width, height = cv2.boundingRect(contour)  # top-left vertex coordinates (x,y) , width, height
@@ -340,7 +340,7 @@ def save_image(image, name_prefix):
     # make file name with the datetime suffix.
     d_date = datetime.datetime.now()  # get current datetime
     current_datetime = d_date.strftime("%Y%m%d%I%M%S")  # datetime to string
-    file_path = name_prefix + "_" + current_datetime + ".jpg"  # complete file name
+    file_path = name_prefix + ".jpg"  # complete file name
     cv2.imwrite(file_path, image)
 
 

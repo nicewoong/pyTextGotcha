@@ -77,9 +77,10 @@ def get_title(path_of_image):
 
 
 def get_progress_image(path_of_image):
+    # todo 변환 과정 병합한 이미지 또는 이미지 처리 완료 후 contour 뽑은 결과 이미지를 리턴하도록 변경하자.
     # resource = resource_dir + filename_prefix + ".jpg"  # complete resource image path
     image_origin = pp.open_original(path_of_image)
-    image_origin = cv2.pyrUp(image_origin)  # size up ( x4 )
+    # image_origin = cv2.pyrUp(image_origin)  # size up ( x4 )
     comparing_images = []
     # show_window(image_origin, 'origin')
     # Grey-Scale
@@ -119,8 +120,8 @@ def get_progress_image(path_of_image):
     contours = pp.get_contours(image_close)
     image_with_contours = pp.draw_contour_rect(image_origin, contours)
 
-    compare_set = merge_vertical(image_close, image_with_contours)
-    comparing_images.append(compare_set)
+    # compare_set = merge_vertical(image_close, image_with_contours)
+    # comparing_images.append(compare_set)
 
     # Merge all step's images
     # image_merged_all = np.hstack(comparing_images)
@@ -130,6 +131,7 @@ def get_progress_image(path_of_image):
     result_file_name = get_title(path_of_image)
     # save final result
     pp.save_image(image_with_contours, 'C:/Users/viva/PycharmProjects/images_with_contour/result_' + result_file_name)
+    show_window(image_with_contours, 'result')
     return pp.get_cropped_images(image_origin, contours)
 
 
@@ -175,8 +177,8 @@ def make_training_images():
         test_count += 1
         # if test_count == 10:
         #     break
-        cropped_images = get_progress_image(image)
-        title = get_title(image)
+        cropped_images = get_progress_image('images/judge_text.jpg')
+        # title = get_title(image)
         count = 0
         for cropped in cropped_images:
             count += 1
@@ -184,25 +186,37 @@ def make_training_images():
             key = show_window(cropped, 'judge ! ')
             crop_and_gray = pp.get_gray(cropped)
             crop_and_gradient = pp.get_gradient(crop_and_gray)
-            print(key)
-            if key == 121 or key == 89:  # yes
-                print('Yes')
-                pp.save_image(crop_and_gradient,
-                              'C:/Users/viva/PycharmProjects/images_cropped/text/' + title + '_cropped_' + str(
-                                  count))
-
-            else:  # no
-                print("No")
-                pp.save_image(crop_and_gradient,
-                              'C:/Users/viva/PycharmProjects/images_cropped/not_text/' + title + '_cropped_' + str(
-                                  count))
+            pp.save_image(crop_and_gradient, 'judge_test_' + str(count))
+            # print(key)
+            # # if key == 121 or key == 89:  # yes
+            # #     print('Yes')
+            # #     pp.save_image(crop_and_gradient,
+            # #                   'C:/Users/viva/PycharmProjects/images_cropped/text/' + title + '_cropped_' + str(
+            # #                       count))
+            # #
+            # # else:  # no
+            # #     print("No")
+            # #     pp.save_image(crop_and_gradient,
+            # #                   'C:/Users/viva/PycharmProjects/images_cropped/not_text/' + title + '_cropped_' + str(
+            # #                       count))
+        break
 
     print('how many images?: ' + str(test_count))
 
 
+def make_judge_test():
+    cropped_images = get_progress_image('images/judge_test.jpg')
+    count = 0
+    for cropped in cropped_images:
+        count += 1
+        gray_copy = pp.get_gray(cropped)
+        gradient_copy = pp.get_gradient(gray_copy)
+        pp.save_image(gradient_copy, 'judge_test_images/cropped_test_' + str(count))
+
+
 def main():
     pp.read_configs('config.yml')
-    make_training_images()
+    make_judge_test()
 
 
 if __name__ == "__main__":
