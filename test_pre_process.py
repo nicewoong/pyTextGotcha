@@ -9,6 +9,7 @@
 
 __author__ = "Woongje Han (niewoong)"
 import pre_process as pp
+import judge_text as jt
 import cv2
 import numpy as np
 import os
@@ -69,85 +70,89 @@ def merge_vertical(image_gray, image_bgr):
     return numpy_vertical
 
 
-def get_title(path_of_image):
-    str_list = path_of_image.split('/')
-    index = len(str_list) - 1
-    str_list2 = str_list[index].split('.')
-    return str_list2[0]
+def get_step_compare_image(path_of_image):
+    """ 이미지 프로세싱 전 단계의 중간 결과물을 하나로 병합하여 반환합니다.
 
-
-def get_progress_image(path_of_image):
-    # todo 변환 과정 병합한 이미지 또는 이미지 처리 완료 후 contour 뽑은 결과 이미지를 리턴하도록 변경하자.
-    # resource = resource_dir + filename_prefix + ".jpg"  # complete resource image path
+    :param path_of_image:
+    :return:
+    """
+    # open original image
     image_origin = pp.open_original(path_of_image)
-    # image_origin = cv2.pyrUp(image_origin)  # size up ( x4 )
+    # size up ( x4 )
+    image_origin = cv2.pyrUp(image_origin)
     comparing_images = []
-    # show_window(image_origin, 'origin')
+
     # Grey-Scale
     image_gray = pp.get_gray(image_origin)
-    # contours = pp.get_contours(image_gray)
-    # image_with_contours = pp.draw_contour_rect(image_origin, contours)
-    #
-    # compare_set = merge_vertical(image_gray, image_with_contours)
-    # comparing_images.append(compare_set)
+    contours = pp.get_contours(image_gray)
+    image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    # merge two image vertically
+    compare_set = merge_vertical(image_gray, image_with_contours)
+    comparing_images.append(compare_set)
 
     # Morph Gradient
     image_gradient = pp.get_gradient(image_gray)
-    # contours = pp.get_contours(image_gradient)
-    # image_with_contours = pp.draw_contour_rect(image_origin, contours)
-    #
-    # compare_set = merge_vertical(image_gradient, image_with_contours)
-    # comparing_images.append(compare_set)
+    contours = pp.get_contours(image_gradient)
+    image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    # merge two current step image vertically
+    compare_set = merge_vertical(image_gradient, image_with_contours)
+    comparing_images.append(compare_set)
 
     # Long line remove
     image_line_removed = pp.remove_long_line(image_gradient)
-    # contours = pp.get_contours(image_line_removed)
-    # image_with_contours = pp.draw_contour_rect(image_origin, contours)
-    #
-    # compare_set = merge_vertical(image_line_removed, image_with_contours)
-    # comparing_images.append(compare_set)
+    contours = pp.get_contours(image_line_removed)
+    image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    # merge two image vertically
+    compare_set = merge_vertical(image_line_removed, image_with_contours)
+    comparing_images.append(compare_set)
 
     # Threshold
     image_threshold = pp.get_threshold(image_line_removed)
-    # contours = pp.get_contours(image_threshold)
-    # image_with_contours = pp.draw_contour_rect(image_origin, contours)
-    #
-    # compare_set = merge_vertical(image_threshold, image_with_contours)
-    # comparing_images.append(compare_set)
+    contours = pp.get_contours(image_threshold)
+    image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    # merge two image vertically
+    compare_set = merge_vertical(image_threshold, image_with_contours)
+    comparing_images.append(compare_set)
 
     # Morph Close
     image_close = pp.get_closing(image_threshold)
     contours = pp.get_contours(image_close)
     image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    # merge two image vertically
+    compare_set = merge_vertical(image_close, image_with_contours)
+    comparing_images.append(compare_set)
 
-    # compare_set = merge_vertical(image_close, image_with_contours)
-    # comparing_images.append(compare_set)
+    # Merge all step's images horizontally
+    image_merged_all = np.hstack(comparing_images)
 
-    # Merge all step's images
-    # image_merged_all = np.hstack(comparing_images)
-    # show_window(image_merged_all, 'image_merged_all')  # show all step
-    # save_image(image_merged_all, filename_prefix)  # save all step image as a file
-
-    result_file_name = get_title(path_of_image)
-    # save final result
-    pp.save_image(image_with_contours, 'C:/Users/viva/PycharmProjects/images_with_contour/result_' + result_file_name)
-    show_window(image_with_contours, 'result')
-    return pp.get_cropped_images(image_origin, contours)
+    return image_merged_all
 
 
-def execute_test_set():
-    # for i in range(1, 17):  # min <= i < max
-    for i in (4, 8, 10, 13, 14):  # min <= i < max
-        filename_prefix = "test (" + str(i) + ")"
-        print(filename_prefix)
-        crop_images = get_progress_image('images/', filename_prefix)
-        count = 0
-        f = open("results/" + filename_prefix + "_log3.txt", 'w')
-        for crop_image in crop_images:
-            count += 1
-            # save_image(crop_image, filename_prefix + "crop_" + str(count))
-            pp.image_to_text_file(crop_image, filename_prefix + "crop_" + str(count), f)
-        f.close()
+def get_image_with_contours(path_of_image):
+    """ 이미지 프로세싱을 거친 후,
+    최종적으로 얻은 Contours 를 원본 이미지 위에 그려서 반환합니다.
+
+    :param path_of_image:
+    :return:
+    """
+    # open original image
+    image_origin = pp.open_original(path_of_image)
+    # size up the resource ( x4 )
+    image_origin = cv2.pyrUp(image_origin)
+    # Grey-Scale
+    image_gray = pp.get_gray(image_origin)
+    # Morph Gradient
+    image_gradient = pp.get_gradient(image_gray)
+    # Long line remove
+    image_line_removed = pp.remove_long_line(image_gradient)
+    # Threshold
+    image_threshold = pp.get_threshold(image_line_removed)
+    # Morph Close
+    image_close = pp.get_closing(image_threshold)
+    # Get contours and Draw it on the original image
+    contours = pp.get_contours(image_close)
+    image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    return image_with_contours
 
 
 def read_all_images(path):
@@ -155,57 +160,20 @@ def read_all_images(path):
     파일명은 Absolute path 가 포함된 이름입니다.
 
     :param path: 읽어 들일 directory 의 절대경로
-    :return: directory 의 모든 file name 을 String 형으로 Array 에 담아 반환
+    :return: directory 의 모든 file path 을 String 형으로 Array 에 담아 반환
     """
-    image_list = []
-
+    image_path_list = []
     for root, dirs, files in os.walk(path):
-        rootpath = os.path.join(os.path.abspath(path), root)
-
+        root_path = os.path.join(os.path.abspath(path), root)
         for file in files:
-            filepath = os.path.join(rootpath, file)
-            image_list.append(filepath)
+            file_path = os.path.join(root_path, file)
+            image_path_list.append(file_path)
 
-    return image_list
-
-
-def make_training_images():
-    # read all paths of images
-    paths_of_images = read_all_images('C:/Users/viva/PycharmProjects/image_to_train/')
-    test_count = 0
-    for image in paths_of_images:
-        test_count += 1
-        # if test_count == 10:
-        #     break
-        cropped_images = get_progress_image('images/judge_text.jpg')
-        # title = get_title(image)
-        count = 0
-        for cropped in cropped_images:
-            count += 1
-            # 이 잘라진 이미지가 글자인지 아닌지 show 해서 내가 직접 확인하고 y n 를 눌러서 저장하자.
-            key = show_window(cropped, 'judge ! ')
-            crop_and_gray = pp.get_gray(cropped)
-            crop_and_gradient = pp.get_gradient(crop_and_gray)
-            pp.save_image(crop_and_gradient, 'judge_test_' + str(count))
-            # print(key)
-            # # if key == 121 or key == 89:  # yes
-            # #     print('Yes')
-            # #     pp.save_image(crop_and_gradient,
-            # #                   'C:/Users/viva/PycharmProjects/images_cropped/text/' + title + '_cropped_' + str(
-            # #                       count))
-            # #
-            # # else:  # no
-            # #     print("No")
-            # #     pp.save_image(crop_and_gradient,
-            # #                   'C:/Users/viva/PycharmProjects/images_cropped/not_text/' + title + '_cropped_' + str(
-            # #                       count))
-        break
-
-    print('how many images?: ' + str(test_count))
+    return image_path_list
 
 
 def make_judge_test():
-    cropped_images = get_progress_image('images/judge_test.jpg')
+    cropped_images = pp.process_image('images/judge_test.jpg')
     count = 0
     for cropped in cropped_images:
         count += 1
@@ -214,9 +182,35 @@ def make_judge_test():
         pp.save_image(gradient_copy, 'judge_test_images/cropped_test_' + str(count))
 
 
+def read_text_from_image(image_path):
+    messages = []
+    cropped_images = pp.process_image(image_path)
+    count = 1
+    for cropped in cropped_images:
+        count += 1
+        # gray_copy = pp.get_gray(cropped)
+        # gradient_copy = pp.get_gradient(gray_copy)
+        # gradient_copy = cv2.cvtColor(gradient_copy, cv2.COLOR_GRAY2BGR)
+        # answer = jt.get_answer_from_cv2_Image(gradient_copy)
+        # print(answer)
+        # pp.save_image(cropped, 'results/cropped_' + str(count))
+        msg = pp.get_text_from_image(cropped)
+        messages.append(msg)
+
+    return messages
+
+
 def main():
-    pp.read_configs('config.yml')
-    make_judge_test()
+    pp.read_configs('config.yml')  # set configs
+    image_path = 'images/test (2).jpg'
+    text_list = read_text_from_image(image_path)
+
+    for text in text_list:
+        print(text)
+    print("=====================================")
+    img = pp.open_original(image_path)
+    img = cv2.pyrUp(img)
+    print(pp.get_text_from_image(img))
 
 
 if __name__ == "__main__":

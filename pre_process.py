@@ -237,10 +237,6 @@ def get_closing(image_gray):
     이 때 인자로 입력되는 이미지는 Gray-scale 이 적용된 2차원 이미지여야 합니다.
     configs 에 의해 kernel size 값을 설정할 수 있습니다.
 
-    todo +++++++++ 아래 설명은 README 로 옮기자
-    커널은 Image Transformation 을 결정하는 구조화된 요소이며
-    커널의 크기가 크거나, 반복횟수가 많아지면 과하게 적용되어 경계가 없어질 수도 있습니다.
-
     :param image_gray: Gray-scale 이 적용된 OpenCV image (2 dimension)
     :return: Morph Close 를 적용한 흑백(Binary) 이미지
     """
@@ -330,7 +326,7 @@ def get_cropped_images(image_origin, contours):
     return cropped_images
 
 
-def save_image(image, name_prefix):
+def save_image(image, name_prefix='untitled'):
     """ 이미지(OpenCV image 객체)를 이미지파일(.jpg)로 저장합니다.
 
     :param image: 저장할 이미지 (OpenCV image 객체)
@@ -340,26 +336,8 @@ def save_image(image, name_prefix):
     # make file name with the datetime suffix.
     d_date = datetime.datetime.now()  # get current datetime
     current_datetime = d_date.strftime("%Y%m%d%I%M%S")  # datetime to string
-    file_path = name_prefix + ".jpg"  # complete file name
+    file_path = name_prefix + '_'+ current_datetime + ".jpg"  # complete file name
     cv2.imwrite(file_path, image)
-
-
-def image_to_text_file(image, title, f_stream=None):
-    """ OCR 엔진(pytesseract) 를 이용해 이미지에서 글자를 추출하여 파일에 씁니다.
-
-    :param image: 텍스트(Text)를 추출할 resource 이미지
-    :param title: 현재 추출한 글자를 구분할 제목 (String)
-    :param f_stream: 추출한 텍스트(Text)를 쓸 파일스트림
-    :return:
-    """
-    img = Image.fromarray(image)
-    text = ocr.image_to_string(img, lang='kor')
-    if f_stream is not None:
-        f_stream.write("================ " + title + " ================ \n")
-        f_stream.write(text + "\n")
-    else:
-        print("================ OCR result : " + title + "================")
-        print(text)
 
 
 def get_text_from_image(image):
@@ -369,7 +347,7 @@ def get_text_from_image(image):
     :return: 추출한 텍스트(Text)를 String 형으로 반환
     """
     img = Image.fromarray(image)
-    text = ocr.image_to_string(img, lang='kor')
+    text = ocr.image_to_string(img, lang='eng+kor')
     return text
 
 
@@ -383,7 +361,7 @@ def process_image(image_file):
     5) Close 적용
 
     :param image_file: 이미지 처리(Image precessing)를 적용할 이미지 파일
-    :return: 이미지 처리(Image precessing)가 적용된 이미지 (OpenCV image 객체)
+    :return: 이미지 처리 후 글자로 추정되는 부분을 잘라낸 이미지 리스트
     """
     image_origin = open_original(image_file)
     image_origin = cv2.pyrUp(image_origin)  # size up ( x4 )
@@ -405,7 +383,8 @@ def process_image(image_file):
 def main():
     read_configs('config.yml')
     print_configs()
-    cropped_images = process_image('images/test (1).jpg')
+    image_path = 'images/test (1).jpg'
+    cropped_images = process_image(image_path)
     count = 0
     for crop_image in cropped_images:
         count += 1
