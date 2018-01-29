@@ -70,6 +70,33 @@ def merge_vertical(image_gray, image_bgr):
     return numpy_vertical
 
 
+def detect_line(image_binary):
+    """ 이미지에서 직선을 찾아서 초록색으로 표시한 결과를 반환합니다.
+
+    :param image_binary: 흑백(Binary) OpenCV image (2 dimension)
+    :return: 라인이 삭제된 이미지 (OpenCV image)
+    """
+    copy = image_binary.copy()  # copy the image to be processed
+    copy_rbg = cv2.cvtColor(copy, cv2.COLOR_GRAY2RGB)
+    # get configs
+    threshold = pp.configs['remove_line']['threshold']
+    min_line_length = pp.configs['remove_line']['min_line_length']
+    max_line_gap = pp.configs['remove_line']['max_line_gap']
+
+    # fine and draw lines
+    lines = cv2.HoughLinesP(copy, 1, np.pi / 180, threshold, np.array([]), min_line_length, max_line_gap)
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]  # get end point of line : ( (x1, y1) , (x2, y2) )
+            # slop = 0
+            # if x2 != x1:
+            #     slop = abs((y2-y1) / (x2-x1))
+            # if slop < 0.5 or slop > 50 or x2 == x1:  # only vertical or parallel lines.
+            #  remove line drawing black line
+            cv2.line(copy_rbg, (x1, y1), (x2, y2), (0, 155, 0), 2)
+    return copy_rbg
+
+
 def get_step_compare_image(path_of_image):
     """ 이미지 프로세싱 전 단계의 중간 결과물을 하나로 병합하여 반환합니다.
 
@@ -92,30 +119,31 @@ def get_step_compare_image(path_of_image):
 
     # Morph Gradient
     image_gradient = pp.get_gradient(image_gray)
+    # image_gradient = pp.get_canny(image_gray)
     contours = pp.get_contours(image_gradient)
     image_with_contours = pp.draw_contour_rect(image_origin, contours)
     # merge two current step image vertically
     compare_set = merge_vertical(image_gradient, image_with_contours)
     comparing_images.append(compare_set)
 
-    # Long line remove
-    image_line_removed = pp.remove_long_line(image_gradient)
-    contours = pp.get_contours(image_line_removed)
-    image_with_contours = pp.draw_contour_rect(image_origin, contours)
-    # merge two image vertically
-    compare_set = merge_vertical(image_line_removed, image_with_contours)
-    comparing_images.append(compare_set)
-
     # Threshold
-    image_threshold = pp.get_threshold(image_line_removed)
+    image_threshold = pp.get_threshold(image_gradient)
     contours = pp.get_contours(image_threshold)
     image_with_contours = pp.draw_contour_rect(image_origin, contours)
     # merge two image vertically
     compare_set = merge_vertical(image_threshold, image_with_contours)
     comparing_images.append(compare_set)
 
+    # Long line remove
+    image_line_removed = pp.remove_long_line(image_threshold)
+    contours = pp.get_contours(image_line_removed)
+    image_with_contours = pp.draw_contour_rect(image_origin, contours)
+    # merge two image vertically
+    compare_set = merge_vertical(image_line_removed, image_with_contours)
+    comparing_images.append(compare_set)
+
     # Morph Close
-    image_close = pp.get_closing(image_threshold)
+    image_close = pp.get_closing(image_line_removed)
     contours = pp.get_contours(image_close)
     image_with_contours = pp.draw_contour_rect(image_origin, contours)
     # merge two image vertically
@@ -143,19 +171,19 @@ def get_image_with_contours(path_of_image):
     image_gray = pp.get_gray(image_origin)
     # Morph Gradient
     image_gradient = pp.get_gradient(image_gray)
-    # Long line remove
-    image_line_removed = pp.remove_long_line(image_gradient)
     # Threshold
-    image_threshold = pp.get_threshold(image_line_removed)
+    image_threshold = pp.get_threshold(image_gradient)
+    # Long line remove
+    image_line_removed = pp.remove_long_line(image_threshold)
     # Morph Close
-    image_close = pp.get_closing(image_threshold)
+    image_close = pp.get_closing(image_line_removed)
     # Get contours and Draw it on the original image
     contours = pp.get_contours(image_close)
     image_with_contours = pp.draw_contour_rect(image_origin, contours)
     return image_with_contours
 
 
-def read_all_images(path):
+def get_file_list(path):
     """ path 가 가리키는 directory 의 모든 파일명을 읽어서 string 으로 반환합니다.
     파일명은 Absolute path 가 포함된 이름입니다.
 
@@ -172,16 +200,6 @@ def read_all_images(path):
     return image_path_list
 
 
-def make_judge_test():
-    cropped_images = pp.process_image('images/judge_test.jpg')
-    count = 0
-    for cropped in cropped_images:
-        count += 1
-        gray_copy = pp.get_gray(cropped)
-        gradient_copy = pp.get_gradient(gray_copy)
-        pp.save_image(gradient_copy, 'judge_test_images/cropped_test_' + str(count))
-
-
 def read_text_from_image(image_path):
     messages = []
     cropped_images = pp.process_image(image_path)
@@ -193,24 +211,34 @@ def read_text_from_image(image_path):
         # gradient_copy = cv2.cvtColor(gradient_copy, cv2.COLOR_GRAY2BGR)
         # answer = jt.get_answer_from_cv2_Image(gradient_copy)
         # print(answer)
-        # pp.save_image(cropped, 'results/cropped_' + str(count))
         msg = pp.get_text_from_image(cropped)
         messages.append(msg)
 
     return messages
 
 
-def main():
-    pp.read_configs('config.yml')  # set configs
-    image_path = 'images/test (2).jpg'
-    text_list = read_text_from_image(image_path)
+def get_image_with_lines(image_path):
+    image_origin = pp.open_original(image_path)
+    image_origin = cv2.pyrUp(image_origin)
+    # Grey-Scale
+    image_gray = pp.get_gray(image_origin)
+    # Morph Gradient
+    image_gradient = pp.get_gradient(image_gray)
+    # Threshold
+    image_threshold = pp.get_threshold(image_gradient)
+    # find and draw lines
+    image_line_removed = detect_line(image_threshold)
+    return image_line_removed
 
-    for text in text_list:
-        print(text)
-    print("=====================================")
-    img = pp.open_original(image_path)
-    img = cv2.pyrUp(img)
-    print(pp.get_text_from_image(img))
+
+def main():
+    pp.read_configs('images/config_screenshot.yml')  # set configs  todo parameter 에서 옵션값으로 입력받도록 바꾸기
+    image_path = 'images/test (11).jpg'  # todo 실행시 parameter 로 image 를 입력받도록 바꾸기
+    result = get_step_compare_image(image_path)
+    # show result
+    show_window(result, 'all steps')
+    result = get_image_with_contours(image_path)
+    show_window(result, 'final result')
 
 
 if __name__ == "__main__":

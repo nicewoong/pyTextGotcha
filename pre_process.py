@@ -9,8 +9,8 @@
   process_image() 에서 순서를 변경하여 적용할 수 있습니다.
     1) Gray-scale 적용
     2) Morph Gradient 적용
-    3) Long Line Removal 적용
-    4) Threshold 적용
+    3) Threshold 적용
+    4) Long Line Removal 적용
     5) Close 적용
 
 * 위 이미지 처리(Image precessing) 단계를 거친 후 Contour(경계영역)를 추출하면
@@ -120,6 +120,16 @@ def get_gray(image_origin):
     return image_grey
 
 
+def get_canny(image_gray):
+    copy = image_gray.copy()
+    kernel_size = 5
+    blur_gray = cv2.GaussianBlur(copy, (kernel_size, kernel_size), 0)
+    low_threshold = 50
+    high_threshold = 150
+    edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
+    return edges
+
+
 def get_gradient(image_gray):
     """ 이미지에 Dilation 과 Erosion 을 적용하여 그 차이를 이용해 윤곽선을 추출합니다.
     이 때 인자로 입력되는 이미지는 Gray scale 이 적용된 2차원 이미지여야 합니다.
@@ -155,19 +165,17 @@ def remove_long_line(image_binary):
     min_line_length = configs['remove_line']['min_line_length']
     max_line_gap = configs['remove_line']['max_line_gap']
 
-    # # Adjust the min_line_length according to the size of image
-    # height, width = copy.shape[:2]  # get image size
-    # min_line_length = height * 0.9
-    # print(min_line_length)
-
     # find and remove lines
-    lines = cv2.HoughLinesP(copy, 1, np.pi / 180, threshold, min_line_length, max_line_gap)
+    lines = cv2.HoughLinesP(copy, 1, np.pi / 180, threshold, np.array([]), min_line_length, max_line_gap)
     if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line[0]  # get end point of line : ( (x1, y1) , (x2, y2) )
-            if x1 == x2 or y1 == y2:  # only vertical or parallel lines.
-                # remove line drawing black line
-                cv2.line(copy, (x1, y1), (x2, y2), (0, 0, 0), 10)
+            # slop = 0
+            # if x2 != x1:
+            #     slop = abs((y2-y1) / (x2-x1))
+            # if slop < 0.5 or slop > 50 or x2 == x1:  # only vertical or parallel lines.
+            # remove line drawing black line
+            cv2.line(copy, (x1, y1), (x2, y2), (0, 0, 0), 2)
     return copy
 
 
@@ -295,7 +303,7 @@ def draw_contour_rect(image_origin, contours):
 
 def get_cropped_images(image_origin, contours):
     """ 이미지에서 찾은 Contour 부분들을 잘라내어 반환합니다.
-    각 contour 를 감싸는 외각 사각형에 여유분(margin)을 주어 이미지를 잘라냅니다.
+    각 contour 를 감싸는 외각 사각형에 여유분(padding)을 주어 이미지를 잘라냅니다.
 
     :param image_origin: 원본 이미지
     :param contours: 잘라낼 contour 리스트
@@ -306,7 +314,7 @@ def get_cropped_images(image_origin, contours):
     global configs
     min_width = configs['contour']['min_width']
     min_height = configs['contour']['min_height']
-    margin = 10  # to give the margin when cropping the images
+    padding = 8  # to give the padding when cropping the images
     origin_height, origin_width = image_copy.shape[:2]  # get image size
     cropped_images = []  # list to save the crop image.
 
@@ -314,12 +322,12 @@ def get_cropped_images(image_origin, contours):
         x, y, width, height = cv2.boundingRect(contour)  # top-left vertex coordinates (x,y) , width, height
         # images that are larger than the standard size
         if width > min_width and height > min_height:
-            # The range of row to crop (with margin)
-            row_from = (y - margin) if (y - margin) > 0 else y
-            row_to = (y + height + margin) if (y + height + margin) < origin_height else y + height
-            # The range of column to crop (with margin)
-            col_from = (x - margin) if (x - margin) > 0 else x
-            col_to = (x + width + margin) if (x + width + margin) < origin_width else x + width
+            # The range of row to crop (with padding)
+            row_from = (y - padding) if (y - padding) > 0 else y
+            row_to = (y + height + padding) if (y + height + padding) < origin_height else y + height
+            # The range of column to crop (with padding)
+            col_from = (x - padding) if (x - padding) > 0 else x
+            col_to = (x + width + padding) if (x + width + padding) < origin_width else x + width
             # Crop the image with Numpy Array
             cropped = image_copy[row_from: row_to, col_from: col_to]
             cropped_images.append(cropped)  # add to the list
@@ -346,6 +354,7 @@ def get_text_from_image(image):
     :param image: 텍스트(Text)를 추출할 resource 이미지
     :return: 추출한 텍스트(Text)를 String 형으로 반환
     """
+    # todo language 도 configs.yml file 에서 설정할 수 있도록 변경하기
     img = Image.fromarray(image)
     text = ocr.image_to_string(img, lang='eng+kor')
     return text
@@ -356,34 +365,36 @@ def process_image(image_file):
     현재 함수에서 순서를 변경하여 적용할 수 있습니다.
     1) Gray-scale 적용
     2) Morph Gradient 적용
-    3) Long Line Removal 적용
-    4) Threshold 적용
+    3) Threshold 적용
+    4) Long Line Removal 적용
     5) Close 적용
 
     :param image_file: 이미지 처리(Image precessing)를 적용할 이미지 파일
     :return: 이미지 처리 후 글자로 추정되는 부분을 잘라낸 이미지 리스트
     """
     image_origin = open_original(image_file)
-    image_origin = cv2.pyrUp(image_origin)  # size up ( x4 )
+    # todo input 사이즈가 일정 수준 이하일 경우 cv2.pyrUp() 으로 사이즈를 확장할 수 있도록 자동화하기
+    # todo 아니면 설정파일에서 사이즈업 할지말지를 선택할 수 있도록 하기 (configs.yml)
+    # image_origin = cv2.pyrUp(image_origin)  # size up ( x4 )
     # Grey-Scale
     image_gray = get_gray(image_origin)
     # Morph Gradient
     image_gradient = get_gradient(image_gray)
-    # Long line remove
-    image_line_removed = remove_long_line(image_gradient)
     # Threshold
-    image_threshold = get_threshold(image_line_removed)
+    image_threshold = get_threshold(image_gradient)
+    # Long line remove
+    image_line_removed = remove_long_line(image_threshold)
     # Morph Close
-    image_close = get_closing(image_threshold)
+    image_close = get_closing(image_line_removed)
     contours = get_contours(image_close)
 
     return get_cropped_images(image_origin, contours)
 
 
 def main():
-    read_configs('config.yml')
+    read_configs('config.yml')  # todo 옵션으로 config.yml 을 parameter 로 입력할 수 있도록 만들어보자.
     print_configs()
-    image_path = 'images/test (1).jpg'
+    image_path = 'images/test (1).jpg'  # todo parameter 로 path 를 입력받도록 하자.
     cropped_images = process_image(image_path)
     count = 0
     for crop_image in cropped_images:
