@@ -5,22 +5,22 @@ resize_origin:
     standard_height: 800
 
 gradient:
-    kernel_size_row: 2   # Gradient Kernel Size
-    kernel_size_col: 2  # Gradient Kernel Size
+    kernel_size_row: 3   # Gradient Kernel Size
+    kernel_size_col: 3  # Gradient Kernel Size
 
 threshold:
     mode: mean  # global, mean, gaussian
     block_size: 5  # Threshold (Odd number !!)
-    subtract_val: 12  # Threshold
-
-close:
-    kernel_size_row: 20  # Closing Kernel Size
-    kernel_size_col: 19   # Closing Kernel Size
+    subtract_val: 15  # Threshold
 
 remove_line:
-    threshold: 100  # Long Line Remove Precision
-    min_line_length: 100  # Long Line Remove  Minimum Line Length
-    max_line_gap: 120   # Long Line Remove Maximum Line Gap
+    threshold: 200  # Long Line Remove Precision
+    min_line_length: 53  # Long Line Remove  Minimum Line Length
+    max_line_gap: 200   # Long Line Remove Maximum Line Gap
+
+close:
+    kernel_size_row: 25  # Closing Kernel Size
+    kernel_size_col: 1   # Closing Kernel Size
 
 contour:
     min_width: 8  # Minimum Contour Rectangle Size
