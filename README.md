@@ -45,7 +45,7 @@ todo : 각 단계를 거쳤을 때 어떤 결과를 얻을 수 있는지 이미�
 
 * [참고 - Morphological Transformations 의 cv2.morphologyEx() 함수](http://opencv-python.readthedocs.io/en/latest/doc/12.imageMorphological/imageMorphological.html?highlight=erosion#opening-closing)
 
-
+<br>
 
     def get_gradient(image_gray):
 * 이미지에 Dilation 과 Erosion 을 적용하여 그 차이를 이용해 윤곽선을 추출합니다. 이 때 인자로 입력되는 이미지는 Gray scale 이 적용된 2차원 이미지여야 합니다.
@@ -61,8 +61,7 @@ todo : 각 단계를 거쳤을 때 어떤 결과를 얻을 수 있는지 이미�
 ##### 3) Threshold 적용
 * [참고 - 이미지 임계처리](http://opencv-python.readthedocs.io/en/latest/doc/09.imageThresholding/imageThresholding.html)
 
-
-
+<br>
     def get_threshold(image_gray):
 * 이미지에 Threshold 를 적용해서 흑백(Binary) 이미지객체를 반환합니다.
     이 때 인자로 입력되는 이미지는 Gray-scale 이 적용된 2차원 이미지여야 합니다.
@@ -85,9 +84,7 @@ todo : 각 단계를 거쳤을 때 어떤 결과를 얻을 수 있는지 이미�
 ##### 4) Long Line Removal 적용
 * [참고 - Line Detection(허프 변환)](http://opencv-python.readthedocs.io/en/latest/doc/25.imageHoughLineTransform/imageHoughLineTransform.html)
 
-
-
-
+<br>
 
     def remove_long_line(image_binary):
 * 이미지에서 직선을 찾아서 삭제합니다. 글자 경계를 찾을 때 방해가 되는 직선을 찾아서 삭제합니다. 이 때 인자로 입력되는 이미지 2 차원(2 dimension) 흑백(Binary) 이미지여야 합니다.
@@ -107,8 +104,7 @@ todo : 각 단계를 거쳤을 때 어떤 결과를 얻을 수 있는지 이미�
 ##### 5) Morph Close 적용
 * [참고 - Morphological Transformations 의 cv2.morphologyEx() 함수](http://opencv-python.readthedocs.io/en/latest/doc/12.imageMorphological/imageMorphological.html?highlight=erosion#opening-closing)
 
-
-
+<br>
 
     def get_closing(image_gray):
 * 이미지에 Morph Close 를 적용한 이미지객체를 반환합니다. 이미지에 Dilation 수행을 한 후 Erosion 을 수행한 것입니다. 이 때 인자로 입력되는 이미지는 Gray-scale 이 적용된 2차원 이미지여야 합니다.
@@ -125,9 +121,7 @@ todo : 각 단계를 거쳤을 때 어떤 결과를 얻을 수 있는지 이미�
 ##### 6) Contour 추출
 * [참고 - Image Contours ](http://opencv-python.readthedocs.io/en/latest/doc/15.imageContours/imageContours.html?highlight=contour)
 
-
-
-
+<br>
 
     def get_contours(image):
 * 이미지에서 Contour 를 추출하여 반환합니다.찾은 contour 리스트를 dictionary 형태로 반환합니다.이미지 처리(Image processing) 단계를 거친 후 contour 를 잘 추출할 수 있습니다.
@@ -183,9 +177,7 @@ pre_precess.py 에서 정의된 이미지 처리(Image precessing)의
   * __:param image_bgr:__ 3차원(3 dimension) BGR 컬리 이미지
   * __:return:__ 옆으로(Horizontally) 병합된 이미지
 
-
-
-
+<br>
 
     def merge_vertical(image_gray, image_bgr):
 *  Width 사이즈가 같은 두 이미지를 위아래로(Vertically) 병합 합니다. 이미지 처리(Image processing) 단계를 원본과 비교하기위한 목적으로, 2차원(2 dimension) 흑백 이미지와 3차원(3 dimension) BGR 컬리 이미지를 인자로 받아 병합합니다.
@@ -193,8 +185,7 @@ pre_precess.py 에서 정의된 이미지 처리(Image precessing)의
   * __:param image_bgr:__ 3차원(3 dimension) BGR 컬리 이미지
   * __:return:__ 위아래로(Vertically) 병합된 이미지
 
-
-
+<br>
 
 
 ### 전체 단계별 이미지처리 결과 한 눈에 확인하기
@@ -236,43 +227,33 @@ pre_precess.py 에서 정의된 이미지 처리(Image precessing)의
 * block_size 는 Odd number(홀수)여야 합니다.
 
 
-
-
-
+<br>
 
     gradient:
         kernel_size_row: 2  # Gradient Kernel Size
         kernel_size_col: 2  # Gradient Kernel Size
 
-*
 
-
-
-
+<br>
 
     close:
         kernel_size_row: 2  # Closing Kernel Size
         kernel_size_col: 2  # Closing Kernel Size
 
-
-
-
+<br>
 
     remove_line:
         threshold: 100  # Long Line Remove Precision
         min_line_length: 100  # Long Line Remove  Minimum     Line Length
         max_line_gap: 5  # Long Line Remove Maximum Line Gap
 
-
-
-
+<br>
 
     contour:
         min_width: 4  # Minimum Contour Rectangle Size
         min_height: 10  # Minimum Contour Rectangle Size
         retrieve_mode: 0  # RETR_EXTERNAL = 0. RETR_LIST = 1, RETR_CCOMP = 2, RETR_TREE = 3, RETR_FLOODFILL = 4
         approx_method: 2  # CHAIN_APPROX_NONE = 1, CHAIN_APPROX_SIMPLE = 2, CHAIN_APPROX_TC89_KCOS = 4, CHAIN_APPROX_TC89_L1 = 3
-
 
 *  retrieve_mode
   * cv2.RETR_EXTERNAL : contours line중 가장 바같쪽 Line만 찾음.
@@ -286,9 +267,7 @@ pre_precess.py 에서 정의된 이미지 처리(Image precessing)의
   * cv2.CHAIN_APPROX_TC89_L1 : contours point를 찾는 algorithm
   * cv2.CHAIN_APPROX_TC89_KCOS : contours point를 찾는 algorithm
 
-
-
-
+<br>
 
 
 
@@ -315,8 +294,7 @@ Inception v3 모델을 가지고 Transfer Learning 을 통해 새로운 모델�
 
 *  결과는 아래와 같이 출력됩니다.
 
-
-
+<br>
 
     text (score = 0.96235)
     not text (score = 0.03765)
