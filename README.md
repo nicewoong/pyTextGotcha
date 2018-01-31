@@ -62,6 +62,8 @@ todo : 각 단계를 거쳤을 때 어떤 결과를 얻을 수 있는지 이미�
 * [참고 - 이미지 임계처리](http://opencv-python.readthedocs.io/en/latest/doc/09.imageThresholding/imageThresholding.html)
 
 <br>
+
+
     def get_threshold(image_gray):
 * 이미지에 Threshold 를 적용해서 흑백(Binary) 이미지객체를 반환합니다.
     이 때 인자로 입력되는 이미지는 Gray-scale 이 적용된 2차원 이미지여야 합니다.
