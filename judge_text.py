@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 
 model_full_path = 'model/retrained_graph.pd'
+
 labels_full_path = 'model/retrained_labels.txt'
 
 

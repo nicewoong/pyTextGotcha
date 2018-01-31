@@ -11,7 +11,8 @@
     2) Morph Gradient 적용
     3) Threshold 적용
     4) Long Line Removal 적용
-    5) Close 적용
+    5) Morph Close 적용
+    6) Contour 추출
 
 * 위 이미지 처리(Image precessing) 단계를 거친 후 Contour(경계영역)를 추출하면
   글자로 추정되는 영역을 발견할 수 있습니다.
@@ -368,6 +369,7 @@ def process_image(image_file):
     3) Threshold 적용
     4) Long Line Removal 적용
     5) Close 적용
+    6) Contour 추출
 
     :param image_file: 이미지 처리(Image precessing)를 적용할 이미지 파일
     :return: 이미지 처리 후 글자로 추정되는 부분을 잘라낸 이미지 리스트
@@ -375,7 +377,7 @@ def process_image(image_file):
     image_origin = open_original(image_file)
     # todo input 사이즈가 일정 수준 이하일 경우 cv2.pyrUp() 으로 사이즈를 확장할 수 있도록 자동화하기
     # todo 아니면 설정파일에서 사이즈업 할지말지를 선택할 수 있도록 하기 (configs.yml)
-    # image_origin = cv2.pyrUp(image_origin)  # size up ( x4 )
+    # image_origin = cv2.pyrUp(image_origin)  # size up ( x4 )  이미지 크기가 작을 경우 이미지 사이즈업 해야합니다.
     # Grey-Scale
     image_gray = get_gray(image_origin)
     # Morph Gradient
@@ -388,14 +390,14 @@ def process_image(image_file):
     image_close = get_closing(image_line_removed)
     contours = get_contours(image_close)
 
-    return get_cropped_images(image_origin, contours)
+    return get_cropped_images(image_origin, contours)  # 글자로 추정되는 부분을 잘라낸 이미지들을 반환
 
 
 def main():
     read_configs('config.yml')  # todo 옵션으로 config.yml 을 parameter 로 입력할 수 있도록 만들어보자.
     print_configs()
-    image_path = 'images/test (1).jpg'  # todo parameter 로 path 를 입력받도록 하자.
-    cropped_images = process_image(image_path)
+    image_path = 'images/test (1).jpg'  # todo parameter 로 image file path 를 입력받도록 하자.
+    cropped_images = process_image(image_path)  # process the image and get cropped images
     count = 0
     for crop_image in cropped_images:
         count += 1
