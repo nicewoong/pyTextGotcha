@@ -8,8 +8,7 @@
 """
 
 __author__ = "Woongje Han (niewoong)"
-import pre_process as pp
-import judge_text as jt
+from src import pre_process as pp
 import cv2
 import numpy as np
 import os
@@ -232,8 +231,8 @@ def get_image_with_lines(image_path):
 
 
 def main():
-    pp.read_configs('images/config_screenshot.yml')  # set configs  todo parameter 에서 옵션값으로 입력받도록 바꾸기
-    image_path = 'images/test (11).jpg'  # todo 실행시 parameter 로 image 를 입력받도록 바꾸기
+    pp.read_configs('test_images/screenshot/config_screenshot.yml')  # set configs  todo parameter 에서 옵션값으로 입력받도록 바꾸기
+    image_path = 'test_images/screenshot/test (11).jpg'  # todo 실행시 parameter 로 image 를 입력받도록 바꾸기
     result = get_step_compare_image(image_path)
     # show result
     show_window(result, 'all steps')

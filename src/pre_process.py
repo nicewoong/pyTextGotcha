@@ -295,7 +295,7 @@ def draw_contour_rect(image_origin, contours):
     # Draw bounding rectangles
     for contour in contours:
         x, y, width, height = cv2.boundingRect(contour)  # top-left vertex coordinates (x,y) , width, height
-        # Draw images that are larger than the standard size
+        # Draw screenshot that are larger than the standard size
         if width > min_width and height > min_height:
             cv2.rectangle(rgb_copy, (x, y), (x + width, y + height), (0, 255, 0), 2)
 
@@ -315,13 +315,13 @@ def get_cropped_images(image_origin, contours):
     global configs
     min_width = configs['contour']['min_width']
     min_height = configs['contour']['min_height']
-    padding = 8  # to give the padding when cropping the images
+    padding = 8  # to give the padding when cropping the screenshot
     origin_height, origin_width = image_copy.shape[:2]  # get image size
     cropped_images = []  # list to save the crop image.
 
-    for contour in contours:  # Crop the images with on bounding rectangles of contours
+    for contour in contours:  # Crop the screenshot with on bounding rectangles of contours
         x, y, width, height = cv2.boundingRect(contour)  # top-left vertex coordinates (x,y) , width, height
-        # images that are larger than the standard size
+        # screenshot that are larger than the standard size
         if width > min_width and height > min_height:
             # The range of row to crop (with padding)
             row_from = (y - padding) if (y - padding) > 0 else y
@@ -394,10 +394,10 @@ def process_image(image_file):
 
 
 def main():
-    read_configs('config.yml')  # todo 옵션으로 config.yml 을 parameter 로 입력할 수 있도록 만들어보자.
+    read_configs('test_images/screenshot/config.yml')  # todo 옵션으로 config.yml 을 parameter 로 입력할 수 있도록 만들어보자.
     print_configs()
-    image_path = 'images/test (1).jpg'  # todo parameter 로 image file path 를 입력받도록 하자.
-    cropped_images = process_image(image_path)  # process the image and get cropped images
+    image_path = 'test_images/screenshot/test (11).jpg'  # todo parameter 로 image file path 를 입력받도록 하자.
+    cropped_images = process_image(image_path)  # process the image and get cropped screenshot
     count = 0
     for crop_image in cropped_images:
         count += 1
